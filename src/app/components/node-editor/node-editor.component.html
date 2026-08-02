@@ -1,0 +1,97 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Edit Node"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+  (onHide)="onHide()"
+>
+  <div class="editor-body">
+    <!-- Title -->
+    <div class="field">
+      <label>Title</label>
+      <input *ngIf="!isItemCategory" pInputText [(ngModel)]="draft.title" placeholder="e.g. Dragon Slayer II" class="w-full" />
+      <div *ngIf="isItemCategory" class="title-autocomplete-wrap">
+        <p-autoComplete
+          [ngModel]="draft.title"
+          (ngModelChange)="onItemTitleChange($event)"
+          [suggestions]="itemSuggestions"
+          (completeMethod)="searchItemSuggestions($event)"
+          (onSelect)="onItemSelect($event)"
+          optionLabel="name"
+          placeholder="e.g. Trident of the seas"
+          [minLength]="2"
+          [delay]="200"
+          class="w-full"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        >
+          <ng-template pTemplate="item" let-item>
+            <div class="item-suggestion">
+              <img [src]="itemSpriteUrl(item.id)" alt="" class="item-suggestion-icon" draggable="false" />
+              <span>{{ item.name }}</span>
+            </div>
+          </ng-template>
+        </p-autoComplete>
+        <i *ngIf="searchingItems" class="pi pi-spinner pi-spin title-search-spinner"></i>
+      </div>
+    </div>
+
+    <!-- Avatar -->
+    <div class="avatar-section">
+      <div class="avatar-wrap" (click)="pickAvatar()" pTooltip="Click to change avatar" tooltipPosition="top">
+        <p-avatar
+          [image]="draft.avatarUrl ?? ''"
+          [label]="draft.avatarUrl ? '' : avatarLabel"
+          shape="circle"
+          size="xlarge"
+          [style]="{ background: categoryColor, border: '2px solid ' + categoryColor }"
+        />
+        <div class="avatar-overlay">
+          <i class="pi pi-camera"></i>
+        </div>
+      </div>
+      <button *ngIf="draft.avatarUrl" pButton icon="pi pi-times" severity="secondary" size="small" class="clear-avatar-btn" (click)="clearAvatar()" pTooltip="Remove avatar"></button>
+      <input #fileInput type="file" accept="image/*" style="display:none" (change)="onFileSelected($event)" />
+
+      <div class="avatar-hint">
+        <span>Or paste an OSRS wiki image URL:</span>
+        <input pInputText [(ngModel)]="draft.avatarUrl" placeholder="https://oldschool.runescape.wiki/images/..." size="small" />
+      </div>
+    </div>
+
+    <!-- Notes / Requirements -->
+    <div class="field">
+      <label>Notes & Requirements</label>
+      <textarea
+        pTextarea
+        [(ngModel)]="draft.notes"
+        rows="5"
+        placeholder="List required quests, skill levels, gear, items..."
+        [autoResize]="false"
+        class="w-full"
+      ></textarea>
+    </div>
+
+    <!-- Category -->
+    <div class="field" *ngIf="settings.categoriesEnabled()">
+      <label>Category</label>
+      <div class="category-grid">
+        <div
+          *ngFor="let cat of categories"
+          class="cat-chip"
+          [class.active]="draft.category === cat.value"
+          [style.--cat-color]="cat.color"
+          (click)="setCategory(cat.value)"
+        >
+          {{ cat.label }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" (click)="cancel()" />
+    <p-button label="Save" icon="pi pi-check" (click)="save()" />
+  </ng-template>
+</p-dialog>

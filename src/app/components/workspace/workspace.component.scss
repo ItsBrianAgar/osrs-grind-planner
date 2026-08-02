@@ -1,0 +1,327 @@
+:host {
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.workspace-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #100e08;
+  background-image: radial-gradient(circle, #2a2416 1.2px, transparent 1.2px);
+  // background-size and background-position set dynamically via [style]
+}
+
+// ── Toolbar ────────────────────────────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #1a1710;
+  border-bottom: 1px solid #3a2e14;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #c8a34a;
+  letter-spacing: 0.5px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.toolbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.zoom-label {
+  font-size: 12px;
+  color: #9a8860;
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Viewport & World ───────────────────────────────────────────────────────
+
+.viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+
+  &.tool-hand {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+.world {
+  position: absolute;
+  transform-origin: 0 0;
+  // actual transform set by [style.transform]
+}
+
+// ── Group containers ───────────────────────────────────────────────────────
+
+// The dashed box + background fill. Deliberately kept BELOW the connections SVG layer
+// (z-index 1) so a connection line passing through or landing in a group's area stays on
+// top and clickable-to-delete — only its header/ports (in .group-overlay below) need to
+// render above the lines.
+.group-bg {
+  position: absolute;
+  background: rgba(200, 163, 74, 0.05);
+  border: 1.5px dashed rgba(200, 163, 74, 0.3);
+  border-radius: 10px;
+  z-index: 0;
+  // auto (not none): needed so right-clicking the group's background shows our own context
+  // menu instead of the browser's. Safe for marquee-select/pan — this element has no mousedown
+  // handler of its own, so those events still bubble through to the viewport exactly as before.
+  pointer-events: auto;
+
+  &.conn-target {
+    border-color: #80e880;
+    box-shadow: 0 0 0 2px rgba(128, 232, 128, 0.4);
+  }
+}
+
+// Header + ports, rendered above the connections layer so they stay visible/clickable —
+// but pointer-events:none on the container itself so its empty space doesn't shadow the
+// lines/nodes underneath; only the actual header/port elements (which set their own
+// pointer-events) are interactive.
+.group-overlay {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+// Ports on a group's edges — lets a line attach to the whole group rather than one node in it.
+// Always visible (not hover-revealed) since the container itself is mostly non-interactive,
+// so there's no reliable hover state to gate on.
+.conn-port {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.conn-port-top {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.conn-port-bottom {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.conn-port-left {
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.conn-port-right {
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.port-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c8a34a;
+  border: 2px solid #1a1710;
+  transition: background 0.1s, transform 0.1s;
+
+  .conn-port:hover & {
+    background: #ffd700;
+    transform: scale(1.3);
+  }
+}
+
+.group-header {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: grab;
+  pointer-events: auto; // re-enable interaction just for this small strip
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(200, 163, 74, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.group-name-input {
+  width: 110px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #f0c040;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: #100e08;
+  border: 1px solid rgba(200, 163, 74, 0.5);
+  border-radius: 3px;
+  padding: 1px 4px;
+  cursor: text;
+
+  &:focus {
+    outline: none;
+    border-color: #f0c040;
+  }
+}
+
+.group-rename-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(200, 163, 74, 0.15);
+  color: rgba(200, 163, 74, 0.7);
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+
+  &:hover {
+    background: rgba(200, 163, 74, 0.35);
+    color: #f0c040;
+  }
+
+  .pi {
+    font-size: 8px;
+  }
+}
+
+.group-rename-btn {
+  background: transparent;
+  opacity: 0;
+
+  .group-header:hover & {
+    opacity: 1;
+  }
+}
+
+// ── Marquee/rubber-band selection box ───────────────────────────────────────
+
+.marquee-box {
+  position: absolute;
+  border: 1.5px solid #c8a34a;
+  background: rgba(200, 163, 74, 0.12);
+  pointer-events: none;
+  z-index: 5;
+}
+
+// ── Bottom tool command bar ─────────────────────────────────────────────────
+
+.tool-dock {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: #1a1710;
+  border: 1px solid #3a2e14;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #9a8860;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover {
+    background: #2a2418;
+    color: #c8a34a;
+  }
+
+  &.active {
+    background: #3a2e14;
+    color: #f0c040;
+  }
+}
+
+// ── Empty state hint ────────────────────────────────────────────────────────
+
+.empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #4a4030;
+  pointer-events: none;
+  user-select: none;
+
+  .pi {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  p {
+    font-size: 15px;
+    margin: 0 0 6px;
+  }
+
+  .hint-sub {
+    font-size: 13px;
+    opacity: 0.7;
+  }
+}

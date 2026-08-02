@@ -1,0 +1,91 @@
+<p-dialog
+  [visible]="visible"
+  (visibleChange)="visibleChange.emit($event)"
+  header="Settings"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '560px' }"
+  (onHide)="close()"
+>
+  <div class="section">
+    <div class="section-label">Node Categories</div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Enable categories</div>
+        <div class="toggle-desc">When off, every node is treated as an Item — the category picker and badges are hidden, and item image search applies to all node titles.</div>
+      </div>
+      <p-toggleswitch [ngModel]="settings.categoriesEnabled()" (onChange)="toggleCategories($event)" />
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Node Style</div>
+    <div class="style-grid">
+      <div
+        *ngFor="let opt of styles"
+        class="style-card"
+        [class.active]="settings.nodeStyle() === opt.id"
+        (click)="select(opt.id)"
+      >
+        <!-- Mini node preview -->
+        <div class="preview" [class]="'preview-' + opt.id">
+
+          <!-- Border preview -->
+          <ng-container *ngIf="opt.id === 'border'">
+            <div class="prev-accent"></div>
+            <div class="prev-inner">
+              <div class="prev-header">
+                <div class="prev-avatar">D</div>
+                <div class="prev-title">Dragon Slayer II</div>
+              </div>
+              <div class="prev-notes">200 QP, Legends Quest…</div>
+              <div class="prev-footer">
+                <span class="prev-cat-text">Quest</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Tint preview -->
+          <ng-container *ngIf="opt.id === 'tint'">
+            <div class="prev-header">
+              <div class="prev-avatar">D</div>
+              <div class="prev-title">Dragon Slayer II</div>
+            </div>
+            <div class="prev-notes">200 QP, Legends Quest…</div>
+            <div class="prev-footer">
+              <span class="prev-dot"></span>
+              <span class="prev-cat-text">Quest</span>
+            </div>
+          </ng-container>
+
+          <!-- Ribbon preview -->
+          <ng-container *ngIf="opt.id === 'ribbon'">
+            <div class="prev-ribbon">
+              <i class="pi pi-book"></i>
+              <span>Quest</span>
+            </div>
+            <div class="prev-header">
+              <div class="prev-avatar">D</div>
+              <div class="prev-title">Dragon Slayer II</div>
+            </div>
+            <div class="prev-notes">200 QP, Legends Quest…</div>
+          </ng-container>
+
+        </div>
+
+        <div class="style-info">
+          <div class="style-name">{{ opt.label }}</div>
+          <div class="style-desc">{{ opt.description }}</div>
+        </div>
+
+        <div class="check-indicator">
+          <i class="pi pi-check"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Done" (click)="close()" />
+  </ng-template>
+</p-dialog>

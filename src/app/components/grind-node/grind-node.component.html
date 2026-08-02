@@ -1,0 +1,65 @@
+<div
+  #nodeEl
+  class="grind-node"
+  [class.selected]="isSelected"
+  [class.group-target]="isGroupTarget"
+  [class.dragging]="isDragging"
+  [class.completed]="node.completed"
+  [class.conn-target]="isConnTarget"
+  [class.style-border]="settings.nodeStyle() === 'border'"
+  [class.style-tint]="settings.nodeStyle() === 'tint'"
+  [class.style-ribbon]="settings.nodeStyle() === 'ribbon'"
+  [class.tool-hand]="tools.effectiveTool() === 'hand'"
+  [style]="nodeStyle"
+  (mousedown)="onMouseDown($event)"
+  (dblclick)="onDblClick($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <!-- Style: border — left accent strip -->
+  <div *ngIf="settings.nodeStyle() === 'border'" class="accent-bar" [style.background]="categoryColor"></div>
+
+  <!-- Content wrapper (border style uses flex row, others just stack) -->
+  <div [class.node-inner]="settings.nodeStyle() === 'border'">
+
+    <!-- Style: ribbon — top label strip -->
+    <div *ngIf="settings.nodeStyle() === 'ribbon' && settings.categoriesEnabled()" class="top-ribbon" [style.background]="categoryColor">
+      <i [class]="'pi ' + categoryIcon"></i>
+      <span>{{ categoryLabel }}</span>
+    </div>
+
+    <!-- Category: shown above the icon-name row for border + tint (ribbon already labels via its own top strip). Hidden entirely when categories are disabled — every node is an Item, so the badge would just repeat. -->
+    <div *ngIf="settings.nodeStyle() !== 'ribbon' && settings.categoriesEnabled()" class="node-category-row">
+      <span *ngIf="settings.nodeStyle() === 'tint'" class="cat-dot" [style.background]="categoryColor"></span>
+      <span class="cat-label" [style.color]="categoryColor">{{ categoryLabel }}</span>
+    </div>
+
+    <div class="node-header">
+      <p-avatar
+        [image]="node.avatarUrl ?? ''"
+        [label]="node.avatarUrl ? '' : avatarLabel"
+        shape="circle"
+        size="normal"
+        class="node-avatar"
+      />
+      <div class="node-title">{{ node.title }}</div>
+      <i *ngIf="node.completed" class="pi pi-check-circle completed-icon"></i>
+    </div>
+
+    <div *ngIf="node.notes" class="node-notes">{{ node.notes }}</div>
+
+  </div>
+
+  <!-- Connection ports — one per side -->
+  <div class="conn-port conn-port-top" (mousedown)="onPortMouseDown($event, 'top')">
+    <div class="port-dot"></div>
+  </div>
+  <div class="conn-port conn-port-right" (mousedown)="onPortMouseDown($event, 'right')">
+    <div class="port-dot"></div>
+  </div>
+  <div class="conn-port conn-port-bottom" (mousedown)="onPortMouseDown($event, 'bottom')">
+    <div class="port-dot"></div>
+  </div>
+  <div class="conn-port conn-port-left" (mousedown)="onPortMouseDown($event, 'left')">
+    <div class="port-dot"></div>
+  </div>
+</div>

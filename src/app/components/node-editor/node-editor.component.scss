@@ -1,0 +1,165 @@
+.editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.avatar-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &:hover .avatar-overlay {
+    opacity: 1;
+  }
+
+  // Native <img> drag would otherwise fight with the click-to-change-avatar interaction.
+  ::ng-deep img {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: #fff;
+  font-size: 18px;
+}
+
+.clear-avatar-btn {
+  align-self: center;
+}
+
+.avatar-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 200px;
+
+  span {
+    font-size: 12px;
+    color: var(--p-text-muted-color, #9a9a9a);
+  }
+
+  input {
+    width: 100%;
+    font-size: 12px;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--p-text-muted-color, #9a9a9a);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.w-full {
+  width: 100%;
+}
+
+.title-autocomplete-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.title-search-spinner {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--p-text-muted-color, #9a9a9a);
+  pointer-events: none;
+}
+
+// p-autocomplete's host defaults to `display: inline`, so width:100% on it has no effect —
+// force it to actually fill the wrapper. Also swap PrimeNG's own loading spinner for ours,
+// which we can position to sit inside the input instead of floating outside it.
+:host ::ng-deep p-autocomplete {
+  display: block;
+  width: 100%;
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 32px;
+  }
+
+  .p-autocomplete-loader {
+    display: none;
+  }
+}
+
+.item-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-suggestion-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat-chip {
+  padding: 5px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--cat-color, #444);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid transparent;
+  transition: border-color 0.12s, color 0.12s, opacity 0.12s;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  &:hover {
+    opacity: 0.85;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  &.active {
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.7);
+    color: #fff;
+  }
+}

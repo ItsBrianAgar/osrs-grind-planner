@@ -1,0 +1,217 @@
+<div class="workspace-root" [style]="gridStyle()">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-brand">
+      <img src="/dev-logo.svg" alt="" width="20" height="20" />
+      <span>OSRS Grind Planner</span>
+    </div>
+
+    <div class="toolbar-actions">
+      <button
+        pButton
+        icon="pi pi-plus"
+        label="Add Node"
+        (click)="addNode()"
+        pTooltip="Add node (or double-click canvas)"
+        tooltipPosition="bottom"
+      ></button>
+    </div>
+
+    <div class="toolbar-right">
+      <button
+        pButton
+        icon="pi pi-cog"
+        severity="secondary"
+        (click)="settingsVisible.set(true)"
+        pTooltip="Settings"
+        tooltipPosition="bottom"
+      ></button>
+    </div>
+
+    <div class="toolbar-zoom">
+      <button pButton icon="pi pi-minus" severity="secondary" size="small" (click)="zoomOut()" pTooltip="Zoom out"></button>
+      <span class="zoom-label">{{ zoom() * 100 | number:'1.0-0' }}%</span>
+      <button pButton icon="pi pi-plus" severity="secondary" size="small" (click)="zoomIn()" pTooltip="Zoom in"></button>
+      <button pButton icon="pi pi-home" severity="secondary" size="small" (click)="resetView()" pTooltip="Reset view"></button>
+    </div>
+  </div>
+
+  <!-- Canvas viewport -->
+  <div
+    class="viewport"
+    [class.tool-hand]="tools.effectiveTool() === 'hand'"
+    (mousedown)="onViewportMouseDown($event)"
+    (mousemove)="onViewportMouseMove($event)"
+    (mouseup)="onViewportMouseUp($event)"
+    (mouseleave)="onViewportMouseUp($event)"
+    (wheel)="onViewportWheel($event)"
+    (dblclick)="onViewportDblClick($event)"
+  >
+    <!-- World (panned + scaled) -->
+    <div class="world" [style.transform]="transform()">
+
+      <!-- Group backgrounds — kept BELOW the connections layer so a line passing through or
+           landing in a group's area stays clickable-to-delete; still catches right-click on
+           the empty group background for the group's context menu. -->
+      <div
+        *ngFor="let g of groupBounds(); trackBy: trackGroup"
+        class="group-bg"
+        [class.conn-target]="connTarget()?.kind === 'group' && connTarget()?.id === g.id"
+        [style.left.px]="g.x"
+        [style.top.px]="g.y"
+        [style.width.px]="g.width"
+        [style.height.px]="g.height"
+        (contextmenu)="onGroupContextMenu($event, g.id)"
+      ></div>
+
+      <!-- SVG connections layer -->
+      <app-connections-layer
+        [connections]="canvas.connections()"
+        [nodes]="canvas.nodes()"
+        [groups]="groupBounds()"
+        [pendingConnection]="pendingConn()"
+        [reconnecting]="reconnecting()"
+        (removeConnection)="canvas.removeConnection($event)"
+        (endpointDragStart)="onEndpointDragStart($event)"
+      />
+
+      <!-- Group headers + ports — kept ABOVE the connections layer so they stay visible/clickable. -->
+      <div
+        *ngFor="let g of groupBounds(); trackBy: trackGroup"
+        class="group-overlay"
+        [style.left.px]="g.x"
+        [style.top.px]="g.y"
+        [style.width.px]="g.width"
+        [style.height.px]="g.height"
+      >
+        <div
+          class="group-header"
+          (mousedown)="onGroupHeaderMouseDown($event, g.id)"
+          (dblclick)="$event.stopPropagation()"
+        >
+          <ng-container *ngIf="editingGroupId() !== g.id">
+            <span class="group-label" pTooltip="Drag to move" tooltipPosition="top">{{ canvas.getGroupName(g.id) }}</span>
+            <button
+              type="button"
+              class="group-rename-btn"
+              (click)="startRenameGroup(g.id)"
+              (mousedown)="$event.stopPropagation()"
+              pTooltip="Rename"
+              tooltipPosition="top"
+            >
+              <i class="pi pi-pencil"></i>
+            </button>
+          </ng-container>
+          <input
+            *ngIf="editingGroupId() === g.id"
+            #groupNameInput
+            class="group-name-input"
+            [value]="canvas.getGroupName(g.id)"
+            autofocus
+            (focus)="groupNameInput.select()"
+            (blur)="commitGroupRename(g.id, groupNameInput.value)"
+            (keydown.enter)="groupNameInput.blur()"
+            (keydown.escape)="cancelGroupRename()"
+            (mousedown)="$event.stopPropagation()"
+            (click)="$event.stopPropagation()"
+          />
+        </div>
+
+        <!-- Connection ports — one per side, so lines can attach to the group as a whole -->
+        <div class="conn-port conn-port-top" (mousedown)="onGroupPortDown({ event: $event, groupId: g.id, side: 'top' })">
+          <div class="port-dot"></div>
+        </div>
+        <div class="conn-port conn-port-right" (mousedown)="onGroupPortDown({ event: $event, groupId: g.id, side: 'right' })">
+          <div class="port-dot"></div>
+        </div>
+        <div class="conn-port conn-port-bottom" (mousedown)="onGroupPortDown({ event: $event, groupId: g.id, side: 'bottom' })">
+          <div class="port-dot"></div>
+        </div>
+        <div class="conn-port conn-port-left" (mousedown)="onGroupPortDown({ event: $event, groupId: g.id, side: 'left' })">
+          <div class="port-dot"></div>
+        </div>
+      </div>
+
+      <!-- Nodes -->
+      <app-grind-node
+        *ngFor="let node of canvas.nodes(); trackBy: trackNode"
+        [node]="node"
+        [isSelected]="canvas.selectedNodeIds().has(node.id)"
+        [isDragging]="isDraggingNode(node.id)"
+        [isGroupTarget]="groupDropTargetId() === node.id"
+        [isConnTarget]="connTarget()?.kind === 'node' && connTarget()?.id === node.id"
+        (dragStart)="onNodeDragStart($event)"
+        (connectionPortDown)="onConnectionPortDown($event)"
+        (contextMenuRequested)="onNodeContextMenu($event)"
+        (editRequested)="editingNodeId.set($event)"
+        (selectRequested)="canvas.selectOnly($event)"
+      />
+
+      <!-- Marquee/rubber-band selection box (select tool only) -->
+      <div
+        *ngIf="marqueeRect() as m"
+        class="marquee-box"
+        [style.left.px]="m.x"
+        [style.top.px]="m.y"
+        [style.width.px]="m.width"
+        [style.height.px]="m.height"
+      ></div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="canvas.nodes().length === 0" class="empty-hint">
+      <i class="pi pi-sitemap"></i>
+      <p>Double-click the canvas to add your first grind node</p>
+      <p class="hint-sub">Or click <strong>Add Node</strong> in the toolbar</p>
+    </div>
+
+    <!-- Bottom tool command bar -->
+    <div class="tool-dock">
+      <button
+        type="button"
+        class="tool-btn"
+        [class.active]="tools.tool() === 'select'"
+        (click)="setTool('select')"
+        pTooltip="Selection tool (V)"
+        tooltipPosition="top"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M4 2 L4 20.5 L8.7 16.2 L11.8 22.4 L14.9 20.9 L11.9 14.8 L18.3 14.5 Z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="tool-btn"
+        [class.active]="tools.tool() === 'hand'"
+        (click)="setTool('hand')"
+        pTooltip="Hand tool (H, or hold Space)"
+        tooltipPosition="top"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 13.2V6.3a1.4 1.4 0 0 1 2.8 0V12" />
+          <path d="M10.8 12V4.8a1.4 1.4 0 0 1 2.8 0V12" />
+          <path d="M13.6 12V6.1a1.4 1.4 0 0 1 2.8 0V12.5" />
+          <path d="M16.4 12.8V9.6a1.4 1.4 0 0 1 2.8 0v6.2c0 3.4-1.9 5.7-5.7 5.7h-1.9c-2.8 0-4.2-.9-5.6-2.8l-2.7-4.1c-.6-.9.2-1.9 1.1-1.7.5.1.9.4 1.2.9L8 15" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Context menu (at workspace level, outside the transformed world) -->
+  <p-contextmenu #ctxMenu [model]="contextMenuItems" appendTo="body" />
+
+  <!-- Settings dialog -->
+  <app-settings-dialog
+    [visible]="settingsVisible()"
+    (visibleChange)="settingsVisible.set($event)"
+  />
+
+  <!-- Node editor dialog -->
+  <app-node-editor
+    *ngIf="editingNodeId()"
+    [nodeId]="editingNodeId()!"
+    (close)="editingNodeId.set(null)"
+  />
+
+  <p-toast position="bottom-right" />
+</div>
