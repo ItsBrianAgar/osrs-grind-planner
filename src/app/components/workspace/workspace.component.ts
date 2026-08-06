@@ -69,6 +69,7 @@ export class WorkspaceComponent {
   readonly gridStyle = computed(() => {
     const size = 28 * this.zoom();
     return {
+      'background-image': this.zoom() < 0.6 ? 'none' : 'radial-gradient(circle, #2a2416 1.2px, transparent 1.2px)',
       'background-size': `${size}px ${size}px`,
       'background-position': `${this.panX() % size}px ${this.panY() % size}px`,
     };
