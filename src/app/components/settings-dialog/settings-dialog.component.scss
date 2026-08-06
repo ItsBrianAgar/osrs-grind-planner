@@ -46,3 +46,8 @@ $text-muted: #9a8860;
   color: $text-muted;
   line-height: 1.4;
 }
+
+.data-actions {
+  display: flex;
+  gap: 10px;
+}

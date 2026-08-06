@@ -29,6 +29,21 @@ interface CanvasSnapshot {
   groupNames: Record<string, string>;
 }
 
+/** Shape written by exportSnapshot() and read back by importSnapshot() — a versioned copy of
+ *  CanvasSnapshot so a future format change can branch on `version` instead of guessing. */
+export interface CanvasExport {
+  version: 1;
+  nodes: GrindNode[];
+  connections: NodeConnection[];
+  groupNames: Record<string, string>;
+}
+
+function isCanvasExport(data: unknown): data is CanvasExport {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d['nodes']) && Array.isArray(d['connections']);
+}
+
 @Injectable({ providedIn: 'root' })
 export class CanvasService {
   private readonly settings = inject(SettingsService);
@@ -112,6 +127,23 @@ export class CanvasService {
     this.undoStack.push(this.currentSnapshot());
     this.restore(next);
     return true;
+  }
+
+  // ── Export / import ──────────────────────────────────────────────────────
+
+  exportSnapshot(): CanvasExport {
+    return { version: 1, ...this.currentSnapshot() };
+  }
+
+  /** Replaces the whole canvas with an imported snapshot, as one undo step so a bad import
+   *  can be undone like any other change. Throws on an unrecognized shape so the caller (the
+   *  file-picker UI) can surface a clear error instead of silently corrupting the canvas. */
+  importSnapshot(data: unknown): void {
+    if (!isCanvasExport(data)) throw new Error("That file doesn't look like a grind planner export.");
+    this.snapshot();
+    this.nodes.set(data.nodes);
+    this.connections.set(data.connections.map(normalizeConnection));
+    this.groupNames.set(data.groupNames ?? {});
   }
 
   getGroupName(groupId: string): string {

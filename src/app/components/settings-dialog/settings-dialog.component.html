@@ -18,6 +18,22 @@
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-label">Data</div>
+    <div class="data-actions">
+      <p-button label="Export canvas" icon="pi pi-download" severity="secondary" (click)="exportCanvas()" />
+      <p-button label="Import canvas" icon="pi pi-upload" severity="secondary" (click)="triggerImport()" />
+      <input
+        #importInput
+        type="file"
+        accept="application/json"
+        hidden
+        (change)="onImportFileSelected($event)"
+      />
+    </div>
+    <div class="toggle-desc">Import replaces every node, connection, and group on the canvas — it can be undone with Ctrl+Z right after.</div>
+  </div>
+
   <ng-template pTemplate="footer">
     <p-button label="Done" (click)="close()" />
   </ng-template>
