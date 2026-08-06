@@ -212,6 +212,7 @@ export class CanvasService {
    *  directly, or at the group it belongs to — are satisfied. Grouping is one level deep, so a
    *  group target just means "gate every member the same way," no recursion involved. */
   prereqStatus(nodeId: string): { total: number; satisfied: number; locked: boolean } {
+    if (!this.settings.prereqsEnabled()) return { total: 0, satisfied: 0, locked: false };
     const groupId = this.getNode(nodeId)?.groupId;
     const prereqs = this.connections().filter(c =>
       (c.toKind === 'node' && c.toId === nodeId) ||

@@ -5,6 +5,7 @@ import { EndpointKind, NodeConnection } from '../../models/connection.model';
 import { GroupBound } from '../../models/group.model';
 import { NodeMetricsService } from '../../services/node-metrics.service';
 import { ToolService } from '../../services/tool.service';
+import { SettingsService } from '../../services/settings.service';
 import { Box, Point, Size, SIDE_NORMALS, sidePoint } from '../../utils/node-geometry';
 
 export interface ReconnectingEnd {
@@ -167,6 +168,7 @@ export class ConnectionsLayerComponent {
 
   private readonly metrics = inject(NodeMetricsService);
   readonly tools = inject(ToolService);
+  private readonly settings = inject(SettingsService);
 
   hoveredId: string | null = null;
 
@@ -194,6 +196,7 @@ export class ConnectionsLayerComponent {
   /** Every connection is a prereq gate: renders dashed/muted while its source isn't satisfied yet,
    *  and snaps solid the moment it is. A group source is satisfied once every member is completed. */
   isPending(conn: NodeConnection): boolean {
+    if (!this.settings.prereqsEnabled()) return false;
     if (conn.fromKind === 'node') return !this.nodes.find(n => n.id === conn.fromId)?.completed;
     return !this.nodes.filter(n => n.groupId === conn.fromId).every(n => n.completed);
   }

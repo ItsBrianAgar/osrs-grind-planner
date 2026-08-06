@@ -19,6 +19,17 @@
   </div>
 
   <div class="section">
+    <div class="section-label">Prerequisites</div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Use prerequisites</div>
+        <div class="toggle-desc">Connections gate their target — a node stays locked and dimmed until everything pointing into it is completed. Turn off to use connections as plain, non-gating links.</div>
+      </div>
+      <p-toggleswitch [ngModel]="settings.prereqsEnabled()" (onChange)="togglePrereqs($event)" />
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-label">Node Style</div>
     <div class="style-grid">
       <div

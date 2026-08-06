@@ -51,6 +51,10 @@ export class SettingsDialogComponent {
     this.settings.setCategoriesEnabled(event.checked);
   }
 
+  togglePrereqs(event: ToggleSwitchChangeEvent): void {
+    this.settings.setPrereqsEnabled(event.checked);
+  }
+
   close(): void {
     this.visibleChange.emit(false);
   }

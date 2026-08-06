@@ -4,6 +4,7 @@ export type NodeStyle = 'border' | 'tint' | 'ribbon';
 
 const STORAGE_KEY = 'osrs-node-style';
 const CATEGORIES_ENABLED_KEY = 'osrs-categories-enabled';
+const PREREQS_ENABLED_KEY = 'osrs-prereqs-enabled';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
@@ -16,6 +17,13 @@ export class SettingsService {
     localStorage.getItem(CATEGORIES_ENABLED_KEY) !== 'false'
   );
 
+  /** When disabled, connections stop gating: no lock badge, no dimming, no dashed-until-done
+   *  edges, and "Mark Complete" is never blocked. The connections themselves aren't touched —
+   *  turning this back on just resumes reading them as prereqs. */
+  readonly prereqsEnabled = signal<boolean>(
+    localStorage.getItem(PREREQS_ENABLED_KEY) !== 'false'
+  );
+
   setNodeStyle(style: NodeStyle): void {
     this.nodeStyle.set(style);
     localStorage.setItem(STORAGE_KEY, style);
@@ -24,5 +32,10 @@ export class SettingsService {
   setCategoriesEnabled(enabled: boolean): void {
     this.categoriesEnabled.set(enabled);
     localStorage.setItem(CATEGORIES_ENABLED_KEY, String(enabled));
+  }
+
+  setPrereqsEnabled(enabled: boolean): void {
+    this.prereqsEnabled.set(enabled);
+    localStorage.setItem(PREREQS_ENABLED_KEY, String(enabled));
   }
 }
