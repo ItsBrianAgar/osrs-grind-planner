@@ -7,7 +7,7 @@ export interface NodeSize {
 
 /**
  * Tracks each node's actual rendered size, keyed by node id. Node cards size to their
- * content (title length, notes, category row), so connection lines and hit-testing need
+ * content (title length, notes), so connection lines and hit-testing need
  * real measured dimensions instead of the nominal NODE_WIDTH/NODE_HEIGHT constants.
  */
 @Injectable({ providedIn: 'root' })

@@ -495,7 +495,7 @@ export class WorkspaceComponent {
     this.ctxMenu.show(event);
   }
 
-  /** Editing is single-node only (title/notes/category), so it's excluded here — every other
+  /** Editing is single-node only (title/notes), so it's excluded here — every other
    *  action applies to the whole selection at once. */
   private buildBulkContextMenu(ids: string[]): MenuItem[] {
     const nodes = ids.map(id => this.canvas.getNode(id)).filter((n): n is GrindNode => !!n);

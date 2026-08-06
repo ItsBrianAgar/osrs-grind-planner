@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgFor, NgIf } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -10,15 +10,14 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TooltipModule } from 'primeng/tooltip';
 import { AutoCompleteModule, AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { CanvasService } from '../../services/canvas.service';
-import { SettingsService } from '../../services/settings.service';
 import { ItemSearchService, ItemMappingEntry } from '../../services/item-search.service';
-import { GrindNode, NodeCategory, CATEGORY_COLORS, CATEGORY_LABELS } from '../../models/grind-node.model';
+import { GrindNode } from '../../models/grind-node.model';
 
 @Component({
   selector: 'app-node-editor',
   standalone: true,
   imports: [
-    FormsModule, NgFor, NgIf,
+    FormsModule, NgIf,
     DialogModule, ButtonModule, InputTextModule, TextareaModule,
     AvatarModule, SelectButtonModule, TooltipModule, AutoCompleteModule,
   ],
@@ -33,24 +32,15 @@ export class NodeEditorComponent implements OnInit {
 
   private readonly canvas = inject(CanvasService);
   private readonly itemSearch = inject(ItemSearchService);
-  readonly settings = inject(SettingsService);
 
   visible = true;
   draft: Partial<GrindNode> = {};
   itemSuggestions: ItemMappingEntry[] = [];
   searchingItems = false;
 
-  readonly categories: { label: string; value: NodeCategory; color: string }[] = (
-    Object.keys(CATEGORY_LABELS) as NodeCategory[]
-  ).map(k => ({ label: CATEGORY_LABELS[k], value: k, color: CATEGORY_COLORS[k] }));
-
   ngOnInit(): void {
     const node = this.canvas.getNode(this.nodeId);
     if (node) this.draft = { ...node };
-  }
-
-  get isItemCategory(): boolean {
-    return !this.settings.categoriesEnabled() || this.draft.category === 'item';
   }
 
   async searchItemSuggestions(event: AutoCompleteCompleteEvent): Promise<void> {
@@ -88,11 +78,6 @@ export class NodeEditorComponent implements OnInit {
     return (this.draft.title?.charAt(0) ?? '?').toUpperCase();
   }
 
-  get categoryColor(): string {
-    if (!this.settings.categoriesEnabled()) return CATEGORY_COLORS['item'];
-    return CATEGORY_COLORS[this.draft.category ?? 'general'];
-  }
-
   pickAvatar(): void {
     this.fileInput.nativeElement.click();
   }
@@ -107,10 +92,6 @@ export class NodeEditorComponent implements OnInit {
 
   clearAvatar(): void {
     this.draft = { ...this.draft, avatarUrl: undefined };
-  }
-
-  setCategory(cat: NodeCategory): void {
-    this.draft = { ...this.draft, category: cat };
   }
 
   save(): void {
