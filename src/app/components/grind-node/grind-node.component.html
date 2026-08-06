@@ -6,6 +6,7 @@
   [class.dragging]="isDragging"
   [class.completed]="node.completed"
   [class.conn-target]="isConnTarget"
+  [class.locked]="locked"
   [class.style-border]="settings.nodeStyle() === 'border'"
   [class.style-tint]="settings.nodeStyle() === 'tint'"
   [class.style-ribbon]="settings.nodeStyle() === 'ribbon'"
@@ -15,6 +16,15 @@
   (dblclick)="onDblClick($event)"
   (contextmenu)="onContextMenu($event)"
 >
+  <!-- Prereq gate badge — only present when something is connected as a prerequisite -->
+  <div *ngIf="prereqTotal > 0" class="prereq-badge">
+    <span class="inbound-socket">
+      <i class="pi pi-lock lock-closed"></i>
+      <i class="pi pi-lock-open lock-open"></i>
+    </span>
+    <span class="prereq-count">{{ prereqSatisfied }}/{{ prereqTotal }}</span>
+  </div>
+
   <!-- Style: border — left accent strip -->
   <div *ngIf="settings.nodeStyle() === 'border'" class="accent-bar" [style.background]="categoryColor"></div>
 

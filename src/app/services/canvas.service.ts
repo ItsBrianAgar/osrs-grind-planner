@@ -23,6 +23,12 @@ function normalizeConnection(c: LegacyNodeConnection): NodeConnection {
   return { fromKind: 'node', toKind: 'node', ...c };
 }
 
+interface CanvasSnapshot {
+  nodes: GrindNode[];
+  connections: NodeConnection[];
+  groupNames: Record<string, string>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CanvasService {
   private readonly settings = inject(SettingsService);
@@ -63,6 +69,49 @@ export class CanvasService {
 
     window.addEventListener('beforeunload', flush);
     window.addEventListener('pagehide', flush);
+  }
+
+  // ── Undo / redo ──────────────────────────────────────────────────────────
+  // Whole-state snapshots rather than per-action inverses — simplest way to make an arbitrary
+  // mix of node/connection/group-name mutations undoable without hand-writing an inverse for
+  // each one. Every array/object here is only ever replaced (never mutated in place), so a
+  // captured reference stays untouched by later changes — no cloning needed.
+
+  private undoStack: CanvasSnapshot[] = [];
+  private redoStack: CanvasSnapshot[] = [];
+
+  private currentSnapshot(): CanvasSnapshot {
+    return { nodes: this.nodes(), connections: this.connections(), groupNames: this.groupNames() };
+  }
+
+  private restore(snap: CanvasSnapshot): void {
+    this.nodes.set(snap.nodes);
+    this.connections.set(snap.connections);
+    this.groupNames.set(snap.groupNames);
+  }
+
+  /** Call once immediately before a discrete user-initiated change (add/delete/edit/connect/group/
+   *  drag-start...), so it becomes a single undo step. Don't call this on every tick of a continuous
+   *  gesture like a drag — snapshot once before the gesture starts, not on every mousemove. */
+  snapshot(): void {
+    this.undoStack.push(this.currentSnapshot());
+    this.redoStack = [];
+  }
+
+  undo(): boolean {
+    const prev = this.undoStack.pop();
+    if (!prev) return false;
+    this.redoStack.push(this.currentSnapshot());
+    this.restore(prev);
+    return true;
+  }
+
+  redo(): boolean {
+    const next = this.redoStack.pop();
+    if (!next) return false;
+    this.undoStack.push(this.currentSnapshot());
+    this.restore(next);
+    return true;
   }
 
   getGroupName(groupId: string): string {
@@ -149,6 +198,28 @@ export class CanvasService {
 
   removeConnection(id: string): void {
     this.connections.update(cs => cs.filter(c => c.id !== id));
+  }
+
+  /** A connection's source is satisfied once it's completed — or, for a group source, once every
+   *  member of that group is (vacuously true for an empty group, which shouldn't occur since
+   *  pruneOrphanedGroupData drops connections attached to a group with no members left). */
+  private isConnectionSatisfied(c: NodeConnection): boolean {
+    if (c.fromKind === 'node') return !!this.getNode(c.fromId)?.completed;
+    return this.nodes().filter(n => n.groupId === c.fromId).every(n => n.completed);
+  }
+
+  /** Every connection is a prereq gate. A node is locked until all connections pointing at it —
+   *  directly, or at the group it belongs to — are satisfied. Grouping is one level deep, so a
+   *  group target just means "gate every member the same way," no recursion involved. */
+  prereqStatus(nodeId: string): { total: number; satisfied: number; locked: boolean } {
+    const groupId = this.getNode(nodeId)?.groupId;
+    const prereqs = this.connections().filter(c =>
+      (c.toKind === 'node' && c.toId === nodeId) ||
+      (c.toKind === 'group' && !!groupId && c.toId === groupId)
+    );
+    const total = prereqs.length;
+    const satisfied = prereqs.filter(c => this.isConnectionSatisfied(c)).length;
+    return { total, satisfied, locked: satisfied < total };
   }
 
   /** Rewires one end of an existing connection to a different node/group/side (e.g. dragging an endpoint handle). */

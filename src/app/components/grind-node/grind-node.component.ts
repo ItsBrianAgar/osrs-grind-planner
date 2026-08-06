@@ -20,6 +20,10 @@ export class GrindNodeComponent implements AfterViewInit, OnDestroy {
   @Input() isGroupTarget = false;
   @Input() isDragging = false;
   @Input() isConnTarget = false;
+  /** True when this node has at least one incoming connection whose source isn't completed yet. */
+  @Input() locked = false;
+  @Input() prereqTotal = 0;
+  @Input() prereqSatisfied = 0;
 
   @Output() dragStart = new EventEmitter<{ event: MouseEvent; nodeId: string }>();
   @Output() connectionPortDown = new EventEmitter<{ event: MouseEvent; nodeId: string; side: NodeSide }>();

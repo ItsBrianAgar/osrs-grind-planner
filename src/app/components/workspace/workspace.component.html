@@ -57,6 +57,7 @@
         *ngFor="let g of groupBounds(); trackBy: trackGroup"
         class="group-bg"
         [class.conn-target]="connTarget()?.kind === 'group' && connTarget()?.id === g.id"
+        [class.locked]="isGroupLocked(g.id)"
         [style.left.px]="g.x"
         [style.top.px]="g.y"
         [style.width.px]="g.width"
@@ -79,6 +80,7 @@
       <div
         *ngFor="let g of groupBounds(); trackBy: trackGroup"
         class="group-overlay"
+        [class.locked]="isGroupLocked(g.id)"
         [style.left.px]="g.x"
         [style.top.px]="g.y"
         [style.width.px]="g.width"
@@ -140,6 +142,9 @@
         [isDragging]="isDraggingNode(node.id)"
         [isGroupTarget]="groupDropTargetId() === node.id"
         [isConnTarget]="connTarget()?.kind === 'node' && connTarget()?.id === node.id"
+        [locked]="canvas.prereqStatus(node.id).locked"
+        [prereqTotal]="canvas.prereqStatus(node.id).total"
+        [prereqSatisfied]="canvas.prereqStatus(node.id).satisfied"
         (dragStart)="onNodeDragStart($event)"
         (connectionPortDown)="onConnectionPortDown($event)"
         (contextMenuRequested)="onNodeContextMenu($event)"
@@ -213,5 +218,25 @@
     (close)="editingNodeId.set(null)"
   />
 
-  <p-toast position="bottom-right" />
+  <p-toast position="bottom-right">
+    <ng-template let-message let-closeFn="closeFn" #message>
+      <i class="pi toast-icon"
+         [class.pi-check-circle]="message.severity === 'success'"
+         [class.pi-times-circle]="message.severity === 'error'"
+         [class.pi-info-circle]="message.severity !== 'success' && message.severity !== 'error'"
+      ></i>
+      <div class="p-toast-message-text">
+        <div class="p-toast-summary">{{ message.summary }}</div>
+        <div *ngIf="message.detail" class="p-toast-detail">{{ message.detail }}</div>
+      </div>
+      <button
+        *ngIf="message.data?.undo"
+        type="button"
+        pButton
+        size="small"
+        class="toast-undo-btn"
+        (click)="message.data.undo(); closeFn()"
+      >Undo</button>
+    </ng-template>
+  </p-toast>
 </div>

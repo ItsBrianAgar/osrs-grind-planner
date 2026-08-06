@@ -13,7 +13,9 @@
   cursor: grab;
   user-select: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   overflow: visible; // ports on all 4 sides need to escape the box
   z-index: 2;
 
@@ -21,12 +23,16 @@
     border-color: #c8a34a;
     box-shadow: 0 4px 24px rgba(200, 163, 74, 0.2);
 
-    .conn-port { opacity: 1; }
+    .conn-port {
+      opacity: 1;
+    }
   }
 
   &.selected {
     border-color: #f0c040;
-    box-shadow: 0 0 0 2px rgba(240, 192, 64, 0.35), 0 4px 20px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 0 2px rgba(240, 192, 64, 0.35),
+      0 4px 20px rgba(0, 0, 0, 0.6);
     z-index: 10;
   }
 
@@ -38,17 +44,52 @@
 
   &.group-target {
     border-color: #60c0ff;
-    box-shadow: 0 0 0 2px rgba(96, 192, 255, 0.4), 0 4px 20px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 0 2px rgba(96, 192, 255, 0.4),
+      0 4px 20px rgba(0, 0, 0, 0.6);
   }
 
   &.conn-target {
     border-color: #80e880;
-    box-shadow: 0 0 0 2px rgba(128, 232, 128, 0.4), 0 4px 20px rgba(0, 0, 0, 0.6);
+    box-shadow:
+      0 0 0 2px rgba(128, 232, 128, 0.4),
+      0 4px 20px rgba(0, 0, 0, 0.6);
   }
 
+  // Green marks completion; how opaque it is marks interaction — hovering or selecting stays
+  // legible, with its own green glow replacing the standalone rules' gold/yellow one, so nothing
+  // about a completed node reads as "not actually done." Default stays quieter (no glow, just the
+  // dimmer border) so a whole board of completed nodes doesn't read as loud.
   &.completed {
     opacity: 0.65;
-    .node-title { text-decoration: line-through; color: #6a6040; }
+    border-color: rgba(107, 207, 107, 0.5);
+    .node-title {
+      text-decoration: line-through;
+      color: #6a6040;
+    }
+
+    &:hover,
+    &.selected {
+      border-color: rgba(107, 207, 107, 0.9);
+    }
+
+    // Same soft ambient glow as the standalone :hover rule, just green instead of gold.
+    &:hover {
+      box-shadow: 0 4px 24px rgba(107, 207, 107, 0.2);
+    }
+
+    // Same hard ring + drop shadow as the standalone .selected rule, just green instead of gold.
+    &.selected {
+      box-shadow:
+        0 0 0 2px rgba(107, 207, 107, 0.35),
+        0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  // Gated by an incomplete prereq — dimmed and desaturated so it reads as "not available yet"
+  // without being confused with .completed, which uses opacity + strikethrough for the opposite idea.
+  &.locked {
+    opacity: 0.55;
   }
 
   // Hand tool active: let all mouse interaction pass through to the canvas underneath so
@@ -93,7 +134,9 @@
   color: rgba(255, 255, 255, 0.9);
   border-radius: 5px 5px 0 0; // clip to the card's rounded top corners now that overflow is visible
 
-  .pi { font-size: 10px; }
+  .pi {
+    font-size: 10px;
+  }
 }
 
 // ── Shared content pieces ─────────────────────────────────────────────────────
@@ -179,6 +222,72 @@
   letter-spacing: 0.4px;
 }
 
+// ── Prereq gate badge ────────────────────────────────────────────────────────
+// One pill, top-left, entirely outside the card so it never overlaps title/notes: a lock icon
+// (closed while gated, open once satisfied) plus how many of the node's prereqs are done.
+
+.prereq-badge {
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #17130c;
+  border: 1px solid #7c8ba0;
+  border-radius: 10px;
+  padding: 2px 6px 2px 4px;
+  z-index: 3;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.grind-node:not(.locked) .prereq-badge {
+  border-color: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.35);
+}
+
+.inbound-socket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .pi {
+    font-size: 9px;
+  }
+
+  .lock-open {
+    display: none;
+    color: #ffd700;
+  }
+  .lock-closed {
+    display: block;
+    color: #7c8ba0;
+  }
+}
+
+.grind-node:not(.locked) .inbound-socket {
+  .lock-open {
+    display: block;
+  }
+  .lock-closed {
+    display: none;
+  }
+}
+
+.prereq-count {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #9a8860;
+}
+
+.grind-node:not(.locked) .prereq-count {
+  color: #ffd700;
+}
+
 // ── Connection ports ──────────────────────────────────────────────────────────
 
 .conn-port {
@@ -224,7 +333,9 @@
   border-radius: 50%;
   background: #c8a34a;
   border: 2px solid #1a1710;
-  transition: background 0.1s, transform 0.1s;
+  transition:
+    background 0.1s,
+    transform 0.1s;
 
   .conn-port:hover & {
     background: #ffd700;

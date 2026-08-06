@@ -114,6 +114,7 @@ export class NodeEditorComponent implements OnInit {
   }
 
   save(): void {
+    this.canvas.snapshot();
     this.canvas.updateNode(this.nodeId, this.draft);
     this.close.emit();
   }

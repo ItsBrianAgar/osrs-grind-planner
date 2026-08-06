@@ -286,6 +286,7 @@ export class WorkspaceComponent {
         if (resolved) {
           // Whichever side of the target the cursor is over at drop time — not a geometric guess.
           const toSide = nearestSide(resolved.box, resolved.size, this.mouseWorld.x, this.mouseWorld.y);
+          this.canvas.snapshot();
           this.canvas.addConnection(pc.fromId, pc.fromKind, pc.fromSide, target.id, target.kind, toSide);
         }
       }
@@ -298,6 +299,7 @@ export class WorkspaceComponent {
         const resolved = this.resolveTargetBox(target.id, target.kind);
         if (resolved) {
           const newSide = nearestSide(resolved.box, resolved.size, this.mouseWorld.x, this.mouseWorld.y);
+          this.canvas.snapshot();
           if (rc.end === 'from') this.canvas.updateConnection(rc.connId, { fromId: target.id, fromKind: target.kind, fromSide: newSide });
           else this.canvas.updateConnection(rc.connId, { toId: target.id, toKind: target.kind, toSide: newSide });
         }
@@ -330,6 +332,7 @@ export class WorkspaceComponent {
     if (this.tools.effectiveTool() === 'hand') return;
     if ((event.target as HTMLElement).closest('app-grind-node')) return;
     const { x: wx, y: wy } = this.toWorld(event);
+    this.canvas.snapshot();
     const id = this.canvas.addNode(wx - NODE_WIDTH / 2, wy - NODE_HEIGHT / 2);
     this.editingNodeId.set(id);
   }
@@ -343,6 +346,22 @@ export class WorkspaceComponent {
     if (event.code === 'Space') {
       if (!event.repeat) this.tools.setSpaceHeld(true);
       event.preventDefault();
+      return;
+    }
+
+    // Cmd/Ctrl+Z to undo, +Shift to redo — checked ahead of the modifier-key early-return below,
+    // since that return exists specifically to ignore other shortcuts (browser zoom, etc).
+    const modKey = event.metaKey || event.ctrlKey;
+    if (modKey && !event.altKey && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) this.canvas.redo();
+      else this.canvas.undo();
+      return;
+    }
+
+    if ((event.key === 'Backspace' || event.key === 'Delete') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      this.deleteSelection();
       return;
     }
 
@@ -367,10 +386,28 @@ export class WorkspaceComponent {
     this.tools.setTool(tool);
   }
 
+  /** Deletes whatever's selected. Deleting every member of a group takes the group with it —
+   *  there's no separate "select the group" affordance, so this is also how a group gets removed. */
+  private deleteSelection(): void {
+    const ids = [...this.canvas.selectedNodeIds()];
+    if (ids.length === 0) return;
+
+    this.canvas.snapshot();
+    ids.forEach(id => this.canvas.deleteNode(id));
+
+    this.msg.add({
+      severity: 'success',
+      summary: ids.length === 1 ? 'Node deleted' : `${ids.length} nodes deleted`,
+      life: 5000,
+      data: { undo: () => this.canvas.undo() },
+    });
+  }
+
   // ── Node event handlers ───────────────────────────────────────────────────
 
   onNodeDragStart(e: { event: MouseEvent; nodeId: string }): void {
     this.dragMode = null;
+    this.canvas.snapshot();
     this.draggingNodeId.set(e.nodeId);
     this.dragStartMouse = { x: e.event.clientX, y: e.event.clientY };
 
@@ -407,6 +444,7 @@ export class WorkspaceComponent {
     event.stopPropagation();
     event.preventDefault();
     this.dragMode = null;
+    this.canvas.snapshot();
     this.draggingNodeId.set(groupId);
     this.dragStartMouse = { x: event.clientX, y: event.clientY };
 
@@ -441,9 +479,17 @@ export class WorkspaceComponent {
 
     this.contextMenuItems = [
       { label: 'Rename', icon: 'pi pi-pencil', command: () => this.startRenameGroup(groupId) },
-      { label: 'Ungroup', icon: 'pi pi-th-large', command: () => memberIds.forEach(id => this.canvas.ungroupNode(id)) },
+      {
+        label: 'Ungroup',
+        icon: 'pi pi-th-large',
+        command: () => { this.canvas.snapshot(); memberIds.forEach(id => this.canvas.ungroupNode(id)); },
+      },
       { separator: true },
-      { label: 'Delete', icon: 'pi pi-trash', command: () => memberIds.forEach(id => this.canvas.deleteNode(id)) },
+      {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        command: () => { this.canvas.snapshot(); memberIds.forEach(id => this.canvas.deleteNode(id)); },
+      },
     ];
 
     this.ctxMenu.show(event);
@@ -462,28 +508,65 @@ export class WorkspaceComponent {
       {
         label: allCompleted ? 'Mark Incomplete' : 'Mark Complete',
         icon: allCompleted ? 'pi pi-times-circle' : 'pi pi-check-circle',
-        command: () => ids.forEach(id => this.canvas.updateNode(id, { completed: !allCompleted })),
+        // Completing skips any node still gated by an incomplete prereq — marking incomplete is unaffected.
+        command: () => {
+          this.canvas.snapshot();
+          ids.forEach(id => {
+            if (!allCompleted && this.canvas.prereqStatus(id).locked) return;
+            this.canvas.updateNode(id, { completed: !allCompleted });
+          });
+        },
       },
-      { label: 'Duplicate', icon: 'pi pi-copy', command: () => ids.forEach(id => this.canvas.duplicateNode(id)) },
-      ...(!allAlreadyOneGroup ? [{ label: 'Group', icon: 'pi pi-objects-column', command: () => this.canvas.groupNodesTogether(ids) }] : []),
-      ...(anyGrouped ? [{ label: 'Ungroup', icon: 'pi pi-th-large', command: () => ids.forEach(id => this.canvas.ungroupNode(id)) }] : []),
+      {
+        label: 'Duplicate',
+        icon: 'pi pi-copy',
+        command: () => { this.canvas.snapshot(); ids.forEach(id => this.canvas.duplicateNode(id)); },
+      },
+      ...(!allAlreadyOneGroup ? [{
+        label: 'Group',
+        icon: 'pi pi-objects-column',
+        command: () => { this.canvas.snapshot(); this.canvas.groupNodesTogether(ids); },
+      }] : []),
+      ...(anyGrouped ? [{
+        label: 'Ungroup',
+        icon: 'pi pi-th-large',
+        command: () => { this.canvas.snapshot(); ids.forEach(id => this.canvas.ungroupNode(id)); },
+      }] : []),
       { separator: true },
-      { label: 'Delete', icon: 'pi pi-trash', command: () => ids.forEach(id => this.canvas.deleteNode(id)) },
+      {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        command: () => { this.canvas.snapshot(); ids.forEach(id => this.canvas.deleteNode(id)); },
+      },
     ];
   }
 
   private buildSingleContextMenu(nodeId: string, node: GrindNode): MenuItem[] {
+    const locked = !node.completed && this.canvas.prereqStatus(nodeId).locked;
     return [
       {
         label: node.completed ? 'Mark Incomplete' : 'Mark Complete',
         icon: node.completed ? 'pi pi-times-circle' : 'pi pi-check-circle',
+        disabled: locked,
         command: () => this.toggleCompleted(nodeId),
       },
       { label: 'Edit', icon: 'pi pi-pencil', command: () => this.editingNodeId.set(nodeId) },
-      { label: 'Duplicate', icon: 'pi pi-copy', command: () => this.canvas.duplicateNode(nodeId) },
-      ...(node.groupId ? [{ label: 'Ungroup', icon: 'pi pi-th-large', command: () => this.canvas.ungroupNode(nodeId) }] : []),
+      {
+        label: 'Duplicate',
+        icon: 'pi pi-copy',
+        command: () => { this.canvas.snapshot(); this.canvas.duplicateNode(nodeId); },
+      },
+      ...(node.groupId ? [{
+        label: 'Ungroup',
+        icon: 'pi pi-th-large',
+        command: () => { this.canvas.snapshot(); this.canvas.ungroupNode(nodeId); },
+      }] : []),
       { separator: true },
-      { label: 'Delete', icon: 'pi pi-trash', command: () => this.canvas.deleteNode(nodeId) },
+      {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        command: () => { this.canvas.snapshot(); this.canvas.deleteNode(nodeId); },
+      },
     ];
   }
 
@@ -492,6 +575,7 @@ export class WorkspaceComponent {
   addNode(): void {
     const wx = (window.innerWidth / 2 - this.panX()) / this.zoom();
     const wy = (window.innerHeight / 2 - this.panY()) / this.zoom();
+    this.canvas.snapshot();
     const id = this.canvas.addNode(wx - NODE_WIDTH / 2, wy - NODE_HEIGHT / 2);
     this.editingNodeId.set(id);
   }
@@ -522,7 +606,10 @@ export class WorkspaceComponent {
 
   toggleCompleted(nodeId: string): void {
     const node = this.canvas.getNode(nodeId);
-    if (node) this.canvas.updateNode(nodeId, { completed: !node.completed });
+    if (!node) return;
+    if (!node.completed && this.canvas.prereqStatus(nodeId).locked) return;
+    this.canvas.snapshot();
+    this.canvas.updateNode(nodeId, { completed: !node.completed });
   }
 
   // Removing the input via *ngIf (on Escape) also blurs it as a side effect, which would
@@ -538,7 +625,10 @@ export class WorkspaceComponent {
       this.suppressGroupRenameCommit = false;
       return;
     }
-    this.canvas.setGroupName(groupId, name);
+    if (name.trim() !== this.canvas.getGroupName(groupId)) {
+      this.canvas.snapshot();
+      this.canvas.setGroupName(groupId, name);
+    }
     this.editingGroupId.set(null);
   }
 
@@ -549,6 +639,13 @@ export class WorkspaceComponent {
 
   isDraggingNode(nodeId: string): boolean {
     return this.dragGroupStartPositions.has(nodeId);
+  }
+
+  /** True once every member of a group is individually locked — a group with at least one
+   *  already-unlocked node doesn't get this treatment, since some of it is actionable. */
+  isGroupLocked(groupId: string): boolean {
+    const members = this.canvas.nodes().filter(n => n.groupId === groupId);
+    return members.length > 0 && members.every(n => this.canvas.prereqStatus(n.id).locked);
   }
 
   trackNode(_: number, node: { id: string }): string {

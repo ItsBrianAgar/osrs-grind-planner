@@ -57,7 +57,9 @@ interface ConnGeometry {
             [attr.stroke]="hoveredId === conn.id ? '#ff6b6b' : '#c8a34a'"
             stroke-width="2"
             fill="none"
-            [attr.marker-end]="hoveredId === conn.id ? 'url(#arrowhead-hover)' : 'url(#arrowhead)'"
+            [attr.stroke-dasharray]="isPending(conn) ? '6 4' : null"
+            [attr.stroke-opacity]="isPending(conn) ? 0.55 : 1"
+            [attr.marker-end]="hoveredId === conn.id ? 'url(#arrowhead-hover)' : (isPending(conn) ? 'url(#arrowhead-pending)' : 'url(#arrowhead)')"
           />
           <path
             [attr.d]="geo.path"
@@ -187,6 +189,13 @@ export class ConnectionsLayerComponent {
     event.stopPropagation();
     event.preventDefault();
     this.endpointDragStart.emit({ connId, end, event });
+  }
+
+  /** Every connection is a prereq gate: renders dashed/muted while its source isn't satisfied yet,
+   *  and snaps solid the moment it is. A group source is satisfied once every member is completed. */
+  isPending(conn: NodeConnection): boolean {
+    if (conn.fromKind === 'node') return !this.nodes.find(n => n.id === conn.fromId)?.completed;
+    return !this.nodes.filter(n => n.groupId === conn.fromId).every(n => n.completed);
   }
 
   connGeometry(conn: NodeConnection): ConnGeometry | null {

@@ -104,6 +104,11 @@
     border-color: #80e880;
     box-shadow: 0 0 0 2px rgba(128, 232, 128, 0.4);
   }
+
+  // Every member is gated by an incomplete prereq — same dimmed treatment as a locked node.
+  &.locked {
+    opacity: 0.55;
+  }
 }
 
 // Header + ports, rendered above the connections layer so they stay visible/clickable —
@@ -114,6 +119,10 @@
   position: absolute;
   z-index: 2;
   pointer-events: none;
+
+  &.locked {
+    opacity: 0.55;
+  }
 }
 
 // Ports on a group's edges — lets a line attach to the whole group rather than one node in it.
@@ -323,5 +332,23 @@
   .hint-sub {
     font-size: 13px;
     opacity: 0.7;
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+.toast-undo-btn {
+  // PrimeNG's own severity colors read as low-contrast against the toast — force white/black
+  // explicitly (background AND background-color, since the button's theme sets the shorthand).
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #100e08 !important;
+  font-weight: 700;
+
+  &:hover {
+    background: #f0e6cc !important;
+    background-color: #f0e6cc !important;
+    border-color: #f0e6cc !important;
   }
 }
