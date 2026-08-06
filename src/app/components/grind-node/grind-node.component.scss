@@ -105,7 +105,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 12px 14px 7px;
+  padding: 12px;
 
   // Bottom edge of the card when there are no notes to follow.
   &:last-child {
@@ -114,16 +114,25 @@
 }
 
 .node-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 48px;
   height: 48px;
   font-size: 18px;
   background: #3a2e18;
   border: 1px solid #5a4210;
+  overflow: hidden;
 
-  // The item icon is a native <img>, which browsers make draggable by default — that starts
-  // a native HTML5 drag-ghost instead of our own node-drag when a card is grabbed by its icon.
+  // PrimeNG's theme forces the avatar <img> to width/height: 100%, stretching non-square item
+  // sprites to fill the box — object-fit keeps their aspect ratio and centers them instead.
+  // It's also a native <img>, which browsers make draggable by default — that starts a native
+  // HTML5 drag-ghost instead of our own node-drag when a card is grabbed by its icon.
   ::ng-deep img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
     -webkit-user-drag: none;
     user-select: none;
   }
@@ -171,7 +180,7 @@
   background: #17130c;
   border: 1px solid #7c8ba0;
   border-radius: 10px;
-  padding: 2px 6px 2px 4px;
+  padding: 4px 6px;
   z-index: 3;
   transition:
     border-color 0.15s,

@@ -109,8 +109,7 @@
             #groupNameInput
             class="group-name-input"
             [value]="canvas.getGroupName(g.id)"
-            autofocus
-            (focus)="groupNameInput.select()"
+            appAutofocusSelect
             (blur)="commitGroupRename(g.id, groupNameInput.value)"
             (keydown.enter)="groupNameInput.blur()"
             (keydown.escape)="cancelGroupRename()"

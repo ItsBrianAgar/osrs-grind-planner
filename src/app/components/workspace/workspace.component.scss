@@ -170,7 +170,9 @@
   border-radius: 50%;
   background: #c8a34a;
   border: 2px solid #1a1710;
-  transition: background 0.1s, transform 0.1s;
+  transition:
+    background 0.1s,
+    transform 0.1s;
 
   .conn-port:hover & {
     background: #ffd700;
@@ -233,7 +235,10 @@
   background: rgba(200, 163, 74, 0.15);
   color: rgba(200, 163, 74, 0.7);
   cursor: pointer;
-  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  transition:
+    opacity 0.12s,
+    background 0.12s,
+    color 0.12s;
 
   &:hover {
     background: rgba(200, 163, 74, 0.35);
@@ -292,7 +297,9 @@
   background: transparent;
   color: #9a8860;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 
   &:hover {
     background: #2a2418;
@@ -338,17 +345,17 @@
 // ── Toast ──────────────────────────────────────────────────────────────────
 
 .toast-undo-btn {
-  // PrimeNG's own severity colors read as low-contrast against the toast — force white/black
+  // PrimeNG's own severity colors read as low-contrast against the toast — force black/white
   // explicitly (background AND background-color, since the button's theme sets the shorthand).
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  border-color: #ffffff !important;
-  color: #100e08 !important;
+  background: #100e08 !important;
+  background-color: #100e08 !important;
+  border-color: #100e08 !important;
+  color: #ffffff !important;
   font-weight: 700;
 
   &:hover {
-    background: #f0e6cc !important;
-    background-color: #f0e6cc !important;
-    border-color: #f0e6cc !important;
+    background: #2a2518 !important;
+    background-color: #2a2518 !important;
+    border-color: #2a2518 !important;
   }
 }

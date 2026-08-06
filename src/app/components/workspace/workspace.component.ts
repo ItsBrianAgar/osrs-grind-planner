@@ -16,6 +16,7 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ContextMenu, ContextMenuModule } from 'primeng/contextmenu';
 import { MenuItem, MessageService } from 'primeng/api';
+import { AutofocusSelectDirective } from '../../directives/autofocus-select.directive';
 
 interface Rect {
   x: number;
@@ -42,6 +43,7 @@ interface ConnTarget {
     ToastModule,
     TooltipModule,
     ContextMenuModule,
+    AutofocusSelectDirective,
   ],
   providers: [MessageService],
   templateUrl: './workspace.component.html',

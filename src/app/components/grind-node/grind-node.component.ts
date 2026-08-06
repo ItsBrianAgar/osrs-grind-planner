@@ -1,10 +1,23 @@
-import { Component, Input, Output, EventEmitter, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  inject,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+} from '@angular/core';
 import { NgIf } from '@angular/common';
 import { GrindNode, NodeSide } from '../../models/grind-node.model';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
 import { NodeMetricsService } from '../../services/node-metrics.service';
 import { ToolService } from '../../services/tool.service';
+import { AvatarTrimService } from '../../services/avatar-trim.service';
 
 @Component({
   selector: 'app-grind-node',
@@ -13,7 +26,7 @@ import { ToolService } from '../../services/tool.service';
   templateUrl: './grind-node.component.html',
   styleUrl: './grind-node.component.scss',
 })
-export class GrindNodeComponent implements AfterViewInit, OnDestroy {
+export class GrindNodeComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) node!: GrindNode;
   @Input() isSelected = false;
   @Input() isGroupTarget = false;
@@ -34,7 +47,13 @@ export class GrindNodeComponent implements AfterViewInit, OnDestroy {
 
   readonly tools = inject(ToolService);
   private readonly metrics = inject(NodeMetricsService);
+  private readonly avatarTrim = inject(AvatarTrimService);
   private resizeObserver?: ResizeObserver;
+
+  /** Avatar image actually bound in the template — starts as the raw URL, then swaps to a
+   *  padding-trimmed version once that's ready, so the icon centers on its real artwork. */
+  displayAvatarUrl = '';
+  private lastAvatarUrl?: string;
 
   ngAfterViewInit(): void {
     this.reportSize();
@@ -42,9 +61,27 @@ export class GrindNodeComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver.observe(this.nodeEl.nativeElement);
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['node'] && this.node.avatarUrl !== this.lastAvatarUrl) {
+      this.lastAvatarUrl = this.node.avatarUrl;
+      this.updateAvatar(this.node.avatarUrl);
+    }
+  }
+
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
     this.metrics.remove(this.node.id);
+  }
+
+  private updateAvatar(url: string | undefined): void {
+    if (!url) {
+      this.displayAvatarUrl = '';
+      return;
+    }
+    this.displayAvatarUrl = url;
+    this.avatarTrim.trim(url).then(trimmed => {
+      if (this.node.avatarUrl === url) this.displayAvatarUrl = trimmed;
+    });
   }
 
   private reportSize(): void {
