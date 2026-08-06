@@ -1,9 +1,8 @@
 import { Component, Input, Output, EventEmitter, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { NgIf } from '@angular/common';
-import { GrindNode, NodeCategory, NodeSide, CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ICONS } from '../../models/grind-node.model';
+import { GrindNode, NodeSide } from '../../models/grind-node.model';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
-import { SettingsService } from '../../services/settings.service';
 import { NodeMetricsService } from '../../services/node-metrics.service';
 import { ToolService } from '../../services/tool.service';
 
@@ -33,7 +32,6 @@ export class GrindNodeComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('nodeEl', { static: true }) nodeEl!: ElementRef<HTMLElement>;
 
-  readonly settings = inject(SettingsService);
   readonly tools = inject(ToolService);
   private readonly metrics = inject(NodeMetricsService);
   private resizeObserver?: ResizeObserver;
@@ -54,36 +52,16 @@ export class GrindNodeComponent implements AfterViewInit, OnDestroy {
     this.metrics.set(this.node.id, { width: el.offsetWidth, height: el.offsetHeight });
   }
 
-  /** When categories are disabled, every node is treated as an Item regardless of its stored category. */
-  get effectiveCategory(): NodeCategory {
-    return this.settings.categoriesEnabled() ? this.node.category : 'item';
-  }
-
-  get categoryColor(): string {
-    return CATEGORY_COLORS[this.effectiveCategory] ?? CATEGORY_COLORS['general'];
-  }
-
-  get categoryLabel(): string {
-    return CATEGORY_LABELS[this.effectiveCategory] ?? 'General';
-  }
-
-  get categoryIcon(): string {
-    return CATEGORY_ICONS[this.effectiveCategory] ?? 'pi-circle';
-  }
-
   get avatarLabel(): string {
     return this.node.title?.charAt(0)?.toUpperCase() ?? '?';
   }
 
-  get nodeStyle(): Record<string, string> {
-    const base: Record<string, string> = {
+  get cardStyle(): Record<string, string> {
+    return {
       left: this.node.x + 'px',
       top: this.node.y + 'px',
+      background: '#8b631418',
     };
-    if (this.settings.nodeStyle() === 'tint') {
-      base['background'] = this.categoryColor + '18';
-    }
-    return base;
   }
 
   onMouseDown(event: MouseEvent): void {

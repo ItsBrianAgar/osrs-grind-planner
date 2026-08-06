@@ -149,7 +149,6 @@ export class CanvasService {
       id, x, y,
       title: 'New Grind',
       notes: '',
-      category: this.settings.categoriesEnabled() ? 'general' : 'item',
       completed: false,
     }]);
     return id;
