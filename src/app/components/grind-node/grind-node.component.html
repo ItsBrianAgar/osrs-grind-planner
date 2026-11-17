@@ -6,6 +6,7 @@
   [class.dragging]="isDragging"
   [class.completed]="node.completed"
   [class.conn-target]="isConnTarget"
+  [class.splice-source]="isSpliceSource"
   [class.locked]="locked"
   [class.tool-hand]="tools.effectiveTool() === 'hand'"
   [style]="cardStyle"
@@ -24,7 +25,7 @@
 
   <div class="node-header">
     <p-avatar
-      [image]="displayAvatarUrl"
+      [image]="displayAvatarUrl()"
       [label]="node.avatarUrl ? '' : avatarLabel"
       shape="circle"
       size="normal"

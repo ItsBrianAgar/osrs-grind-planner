@@ -10,6 +10,7 @@ import {
   OnChanges,
   OnDestroy,
   SimpleChanges,
+  signal,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { GrindNode, NodeSide } from '../../models/grind-node.model';
@@ -32,6 +33,8 @@ export class GrindNodeComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() isGroupTarget = false;
   @Input() isDragging = false;
   @Input() isConnTarget = false;
+  /** Being dragged onto a connection — dropping now inserts it there. */
+  @Input() isSpliceSource = false;
   /** True when this node has at least one incoming connection whose source isn't completed yet. */
   @Input() locked = false;
   @Input() prereqTotal = 0;
@@ -52,7 +55,7 @@ export class GrindNodeComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   /** Avatar image actually bound in the template — starts as the raw URL, then swaps to a
    *  padding-trimmed version once that's ready, so the icon centers on its real artwork. */
-  displayAvatarUrl = '';
+  readonly displayAvatarUrl = signal('');
   private lastAvatarUrl?: string;
 
   ngAfterViewInit(): void {
@@ -75,12 +78,14 @@ export class GrindNodeComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private updateAvatar(url: string | undefined): void {
     if (!url) {
-      this.displayAvatarUrl = '';
+      this.displayAvatarUrl.set('');
       return;
     }
-    this.displayAvatarUrl = url;
+    this.displayAvatarUrl.set(url);
+    // A signal, not a plain field: the app is zoneless, so a write from this promise callback
+    // wouldn't otherwise trigger a re-render and the trimmed image wouldn't appear until something else did.
     this.avatarTrim.trim(url).then(trimmed => {
-      if (this.node.avatarUrl === url) this.displayAvatarUrl = trimmed;
+      if (this.node.avatarUrl === url) this.displayAvatarUrl.set(trimmed);
     });
   }
 

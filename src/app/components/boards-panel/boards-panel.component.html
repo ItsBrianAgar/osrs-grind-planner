@@ -1,0 +1,71 @@
+<aside class="sidebar">
+  <div class="rail-item rail-logo" pTooltip="OSRS Grind Planner" tooltipPosition="right">
+    <!-- Inline copy of public/dev-logo.svg (which stays black for the favicon), so it can take a
+         palette colour via currentColor. -->
+    <svg viewBox="0 0 100 100" width="24" height="24" role="img" aria-label="OSRS Grind Planner">
+      <path fill="currentColor" d="M66.8008 16.4004C62.1616 21.0396 62.1616 28.56 66.8008 33.1992C71.3675 37.7659 78.7269 37.838 83.3809 33.4141L83.6006 33.2002L92 41.5996C84.1716 49.428 72.2399 50.651 63.1289 45.2695L45.2705 63.1289C50.6517 72.2399 49.4278 84.1718 41.5996 92L33.2002 83.6006C37.8394 78.9614 37.8384 71.44 33.1992 66.8008C28.56 62.1616 21.0396 62.1616 16.4004 66.8008L8 58.4004C15.8279 50.5725 27.7593 49.3481 36.8701 54.7285L54.7285 36.8691C49.3486 27.7584 50.5727 15.8277 58.4004 8L66.8008 16.4004Z" />
+    </svg>
+  </div>
+
+  <div class="rail-boards">
+    <div
+      class="rail-board-list"
+      cdkDropList
+      cdkDropListLockAxis="y"
+      [cdkDropListData]="canvas.boards()"
+      (cdkDropListDropped)="onBoardDrop($event)"
+    >
+      <button
+        *ngFor="let b of canvas.boards(); trackBy: trackBoard"
+        cdkDrag
+        [cdkDragDisabled]="!!renaming()"
+        type="button"
+        class="rail-item rail-board"
+        [class.active]="b.id === canvas.activeBoardId()"
+        [attr.data-board-id]="b.id"
+        (click)="canvas.switchBoard(b.id)"
+        (dblclick)="startRename(b.id)"
+        (contextmenu)="openMenu($event, b)"
+        [pTooltip]="b.name"
+        [tooltipDisabled]="renaming()?.id === b.id"
+        tooltipPosition="right"
+        [attr.aria-label]="b.name"
+      >{{ initial(b.name) }}</button>
+    </div>
+
+    <button
+      type="button"
+      class="rail-item rail-add"
+      (click)="newBoard()"
+      pTooltip="New board"
+      tooltipPosition="right"
+      aria-label="New board"
+    >
+      <i class="pi pi-plus"></i>
+    </button>
+  </div>
+
+  <div class="rail-footer">
+    <button type="button" class="rail-item rail-icon" (click)="openSettings.emit()" pTooltip="Settings" tooltipPosition="right" aria-label="Settings">
+      <i class="pi pi-cog"></i>
+    </button>
+  </div>
+</aside>
+
+<!-- Rename popout: fixed-positioned beside the tile, outside the scrolling list so it isn't clipped. -->
+<input
+  *ngIf="renaming() as r"
+  #nameInput
+  class="rename-input"
+  [style.left.px]="r.left"
+  [style.top.px]="r.top"
+  [value]="r.name"
+  maxlength="60"
+  aria-label="Board name"
+  appAutofocusSelect
+  (blur)="commitRename(r.id, nameInput.value)"
+  (keydown.enter)="nameInput.blur()"
+  (keydown.escape)="cancelRename()"
+/>
+
+<p-menu #boardMenu [model]="menuItems" [popup]="true" appendTo="body" />

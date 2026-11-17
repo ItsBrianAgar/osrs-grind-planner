@@ -7,6 +7,11 @@ import { MessageService } from 'primeng/api';
 import { SettingsService } from '../../services/settings.service';
 import { CanvasService } from '../../services/canvas.service';
 
+/** "Ironman: Quest cape!" → "ironman-quest-cape", for download file names. */
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 @Component({
   selector: 'app-settings-dialog',
   standalone: true,
@@ -27,15 +32,28 @@ export class SettingsDialogComponent {
     this.settings.setPrereqsEnabled(event.checked);
   }
 
-  exportCanvas(): void {
-    const json = JSON.stringify(this.canvas.exportSnapshot(), null, 2);
+  toggleSpliceOnDrop(event: ToggleSwitchChangeEvent): void {
+    this.settings.setSpliceOnDropEnabled(event.checked);
+  }
+
+  exportBoard(): void {
+    const snapshot = this.canvas.exportSnapshot();
+    this.download(snapshot, `osrs-grind-planner-${slugify(snapshot.name ?? '') || 'board'}`);
+  }
+
+  exportAllBoards(): void {
+    this.download(this.canvas.exportAllBoards(), 'osrs-grind-planner-all-boards');
+  }
+
+  private download(data: unknown, baseName: string): void {
+    const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const date = new Date().toISOString().slice(0, 10);
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = `osrs-grind-planner-${date}.json`;
+    link.download = `${baseName}-${date}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -51,13 +69,12 @@ export class SettingsDialogComponent {
 
     try {
       const data = JSON.parse(await file.text());
-      this.canvas.importSnapshot(data);
+      const added = this.canvas.importBoards(data, file.name.replace(/\.json$/i, ''));
       this.msg.add({
         severity: 'success',
-        summary: 'Canvas imported',
-        detail: `Replaced the canvas with "${file.name}"`,
+        summary: added.length === 1 ? 'Board imported' : `${added.length} boards imported`,
+        detail: added.length === 1 ? `Added "${added[0].name}"` : `Added from "${file.name}"`,
         life: 5000,
-        data: { undo: () => this.canvas.undo() },
       });
     } catch (err) {
       this.msg.add({

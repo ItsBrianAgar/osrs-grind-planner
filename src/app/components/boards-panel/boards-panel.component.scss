@@ -1,0 +1,167 @@
+$panel-bg: #1a1710;
+$border: #3a2e14;
+$gold: #c8a34a;
+$text-primary: #e8d5a3;
+$text-muted: #9a8860;
+// Size of every item in the rail — board tiles and the icon buttons alike — so they always line
+// up. Change this one value to resize them all.
+$rail-item-size: 40px;
+$rail-width: 52px;
+
+:host {
+  display: flex;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: $rail-width;
+  padding: 10px 0;
+  gap: 8px;
+  background: $panel-bg;
+  border-right: 1px solid $border;
+}
+
+// Shared box for everything in the rail.
+.rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $rail-item-size;
+  height: $rail-item-size;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.rail-logo {
+  cursor: default;
+  color: #a6d64e; // lime green — a contrasting accent against the warm gold palette, so the brand mark stands out
+}
+
+.rail-icon {
+  color: $text-muted;
+
+  i {
+    font-size: 15px;
+  }
+
+  &:hover {
+    background: #2a2417;
+    color: $gold;
+  }
+}
+
+// ── Boards ─────────────────────────────────────────────────────────────────
+
+.rail-boards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border-top: 1px solid $border;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.rail-board-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.rail-board {
+  background: #0e0c07; // a couple of steps below $panel-bg, so tiles sit recessed in the rail
+  color: #b3a27a;
+  font-size: 15px;
+  font-weight: 700;
+
+  &:hover {
+    border-color: #4a3e22;
+    color: #cdbb8e;
+  }
+
+  &.active {
+    background: #362e1b;
+    border-color: #5a4a26;
+    color: $gold;
+  }
+}
+
+// ── Drag to reorder (CDK drag-drop) ──
+// The dragged tile follows the cursor as a lifted copy; its slot in the list stays as an empty
+// outline, and the other tiles slide to make room.
+
+.rail-board.cdk-drag-preview {
+  border-color: #5a4a26;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  cursor: grabbing;
+}
+
+.rail-board.cdk-drag-placeholder {
+  background: transparent;
+  border: 1px dashed #4a3e22;
+  color: transparent;
+}
+
+.rail-board.cdk-drag-animating,
+.rail-board-list.cdk-drop-list-dragging .rail-board:not(.cdk-drag-placeholder) {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
+// "New board" tile at the end of the list (like Discord's add-server button).
+.rail-add {
+  background: #2e2819;
+  color: $text-muted;
+
+  i {
+    font-size: 15px;
+    // PrimeIcons' plus is a thinner glyph than the other icons; a stroke in the text colour
+    // thickens it to match.
+    -webkit-text-stroke: 0.6px currentColor;
+  }
+
+  &:hover {
+    border-color: #4a3e22;
+    color: $gold;
+  }
+}
+
+.rail-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+// ── Rename popout ──────────────────────────────────────────────────────────
+
+.rename-input {
+  position: fixed;
+  z-index: 1000;
+  transform: translateY(-50%);
+  width: 200px;
+  height: 34px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  color: $text-primary;
+  background: $panel-bg;
+  border: 1px solid $gold;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  &:focus {
+    outline: none;
+  }
+}

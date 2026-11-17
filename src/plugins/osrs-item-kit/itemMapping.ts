@@ -29,9 +29,11 @@ export async function fetchItemMapping(): Promise<ItemMappingEntry[]> {
   // No custom headers here: a "User-Agent" header is a non-simple header that forces a
   // CORS preflight, and prices.runescape.wiki's endpoint 400s on preflight — silently
   // breaking the fetch in-browser. Plain requests only need simple/exempt headers.
+  // RuneLite's list only fills gaps, so a network failure there (not just a bad status) mustn't
+  // take down the whole search — resolve it to null and carry on with the GE mapping alone.
   const [geRes, rlRes] = await Promise.all([
     fetch('https://prices.runescape.wiki/api/v1/osrs/mapping'),
-    fetch(RUNELITE_NAMES_URL),
+    fetch(RUNELITE_NAMES_URL).catch(() => null),
   ]);
 
   if (!geRes.ok) throw new Error('Failed to fetch item mapping');
@@ -55,7 +57,7 @@ export async function fetchItemMapping(): Promise<ItemMappingEntry[]> {
   // Noted variants are excluded: same-name dupes from RuneLite are noted/placeholder
   // copies of an item already covered by its unnoted GE entry.
   const existingNames = new Set(entries.map(e => e.name.toLowerCase()));
-  if (rlRes.ok) {
+  if (rlRes?.ok) {
     const rlNames: Record<string, string> = await rlRes.json();
     for (const [idStr, name] of Object.entries(rlNames)) {
       const id = parseInt(idStr, 10);

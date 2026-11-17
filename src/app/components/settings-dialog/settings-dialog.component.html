@@ -19,10 +19,22 @@
   </div>
 
   <div class="section">
+    <div class="section-label">Connections</div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Insert on drop</div>
+        <div class="toggle-desc">Hold a dragged node or group over a connection for a moment, then drop, to insert it in between — A → B becomes A → dropped → B. Turn off to drop over connections without changing them.</div>
+      </div>
+      <p-toggleswitch [ngModel]="settings.spliceOnDropEnabled()" (onChange)="toggleSpliceOnDrop($event)" />
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-label">Data</div>
     <div class="data-actions">
-      <p-button label="Export canvas" icon="pi pi-download" severity="secondary" (click)="exportCanvas()" />
-      <p-button label="Import canvas" icon="pi pi-upload" severity="secondary" (click)="triggerImport()" />
+      <p-button label="Export this board" icon="pi pi-download" severity="secondary" (click)="exportBoard()" />
+      <p-button label="Export all boards" icon="pi pi-download" severity="secondary" (click)="exportAllBoards()" />
+      <p-button label="Import" icon="pi pi-upload" severity="secondary" (click)="triggerImport()" />
       <input
         #importInput
         type="file"
@@ -31,7 +43,7 @@
         (change)="onImportFileSelected($event)"
       />
     </div>
-    <div class="toggle-desc">Import replaces every node, connection, and group on the canvas — it can be undone with Ctrl+Z right after.</div>
+    <div class="toggle-desc">Import takes either kind of export and adds what's in it as new boards — your existing boards are never overwritten.</div>
   </div>
 
   <ng-template pTemplate="footer">

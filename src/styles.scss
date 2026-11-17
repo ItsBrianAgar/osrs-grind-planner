@@ -13,3 +13,9 @@ body {
   background: #100e08;
   color: #e8d5a3;
 }
+
+// A little breathing room around the divider in right-click menus (node context menu and board menu).
+.p-contextmenu-separator,
+.p-menu-separator {
+  margin-block: 3px;
+}

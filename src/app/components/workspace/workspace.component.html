@@ -1,51 +1,22 @@
-<div class="workspace-root" [style]="gridStyle()">
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="toolbar-brand">
-      <img src="/dev-logo.svg" alt="" width="20" height="20" />
-      <span>OSRS Grind Planner</span>
-    </div>
-
-    <div class="toolbar-actions">
-      <button
-        pButton
-        icon="pi pi-plus"
-        label="Add Node"
-        (click)="addNode()"
-        pTooltip="Add node (or double-click canvas)"
-        tooltipPosition="bottom"
-      ></button>
-    </div>
-
-    <div class="toolbar-right">
-      <button
-        pButton
-        icon="pi pi-cog"
-        severity="secondary"
-        (click)="settingsVisible.set(true)"
-        pTooltip="Settings"
-        tooltipPosition="bottom"
-      ></button>
-    </div>
-
-    <div class="toolbar-zoom">
-      <button pButton icon="pi pi-minus" severity="secondary" size="small" (click)="zoomOut()" pTooltip="Zoom out"></button>
-      <span class="zoom-label">{{ zoom() * 100 | number:'1.0-0' }}%</span>
-      <button pButton icon="pi pi-plus" severity="secondary" size="small" (click)="zoomIn()" pTooltip="Zoom in"></button>
-      <button pButton icon="pi pi-home" severity="secondary" size="small" (click)="resetView()" pTooltip="Reset view"></button>
-    </div>
-  </div>
+<div class="workspace-root">
+  <div class="workspace-body">
+  <app-boards-panel
+    (openSettings)="settingsVisible.set(true)"
+  />
 
   <!-- Canvas viewport -->
   <div
+    #viewport
     class="viewport"
+    [style]="gridStyle()"
     [class.tool-hand]="tools.effectiveTool() === 'hand'"
     (mousedown)="onViewportMouseDown($event)"
     (mousemove)="onViewportMouseMove($event)"
     (mouseup)="onViewportMouseUp($event)"
-    (mouseleave)="onViewportMouseUp($event)"
+    (mouseleave)="onViewportMouseUp($event); updateGroupTooltipSnooze(true); mouseInViewport = false"
     (wheel)="onViewportWheel($event)"
     (dblclick)="onViewportDblClick($event)"
+    (contextmenu)="onCanvasContextMenu($event)"
   >
     <!-- World (panned + scaled) -->
     <div class="world" [style.transform]="transform()">
@@ -57,6 +28,7 @@
         *ngFor="let g of groupBounds(); trackBy: trackGroup"
         class="group-bg"
         [class.conn-target]="connTarget()?.kind === 'group' && connTarget()?.id === g.id"
+        [class.splice-source]="isSpliceSource(g.id, 'group')"
         [class.locked]="isGroupLocked(g.id)"
         [style.left.px]="g.x"
         [style.top.px]="g.y"
@@ -72,7 +44,8 @@
         [groups]="groupBounds()"
         [pendingConnection]="pendingConn()"
         [reconnecting]="reconnecting()"
-        (removeConnection)="canvas.removeConnection($event)"
+        [splicePreview]="splicePreview()"
+        (removeConnection)="deleteConnection($event)"
         (endpointDragStart)="onEndpointDragStart($event)"
       />
 
@@ -89,10 +62,16 @@
         <div
           class="group-header"
           (mousedown)="onGroupHeaderMouseDown($event, g.id)"
+          (contextmenu)="editingGroupId() !== g.id && onGroupContextMenu($event, g.id)"
           (dblclick)="$event.stopPropagation()"
         >
           <ng-container *ngIf="editingGroupId() !== g.id">
-            <span class="group-label" pTooltip="Drag to move" tooltipPosition="top">{{ canvas.getGroupName(g.id) }}</span>
+            <span
+              class="group-label"
+              pTooltip="Drag to move"
+              tooltipPosition="top"
+              [tooltipDisabled]="isGroupTooltipDisabled(g.id)"
+            >{{ canvas.getGroupName(g.id) }}</span>
             <button
               type="button"
               class="group-rename-btn"
@@ -100,6 +79,7 @@
               (mousedown)="$event.stopPropagation()"
               pTooltip="Rename"
               tooltipPosition="top"
+              [tooltipDisabled]="anyDragActive()"
             >
               <i class="pi pi-pencil"></i>
             </button>
@@ -141,6 +121,7 @@
         [isDragging]="isDraggingNode(node.id)"
         [isGroupTarget]="groupDropTargetId() === node.id"
         [isConnTarget]="connTarget()?.kind === 'node' && connTarget()?.id === node.id"
+        [isSpliceSource]="isSpliceSource(node.id, 'node')"
         [locked]="canvas.prereqStatus(node.id).locked"
         [prereqTotal]="canvas.prereqStatus(node.id).total"
         [prereqSatisfied]="canvas.prereqStatus(node.id).satisfied"
@@ -150,6 +131,34 @@
         (editRequested)="editingNodeId.set($event)"
         (selectRequested)="canvas.selectOnly($event)"
       />
+
+      <!-- Insert-into-connection label, off whichever side of the dragged node/group the new links
+           leave free. While charging it's a "hold" prompt with a bar that fills over the dwell time;
+           once armed it swaps for the insert prompt, which fades as the unit is pulled away to cancel. -->
+      <div
+        *ngFor="let sp of splicePreviewList(); trackBy: trackSplice"
+        class="splice-label"
+        [class]="'splice-label--' + sp.labelSide"
+        [style.left.px]="sp.labelX"
+        [style.top.px]="sp.labelY"
+        [style.transform]="spliceLabelTransform(sp)"
+        [style.opacity]="1 - sp.cancelProgress * 0.75"
+      >
+        <div class="splice-label-inner" [class.charging]="!sp.armed" [style.animation-delay.ms]="sp.armed ? 0 : sp.chargeDelayMs">
+          <!-- Plus over a down chevron: "add this in here" -->
+          <svg class="splice-icon" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true">
+            <path d="M6 1.5v5M3.5 4h5M2.5 8.8 6 12.3l3.5-3.5" />
+          </svg>
+          <span>{{ sp.armed ? sp.label : 'Hold to insert' }}</span>
+          <div
+            *ngIf="!sp.armed"
+            class="splice-charge-bar"
+            [style.animation-duration.ms]="sp.dwellMs"
+            [style.animation-delay.ms]="sp.chargeDelayMs"
+          ></div>
+        </div>
+        <div *ngIf="sp.armed" class="splice-label-hint">Drag away to cancel</div>
+      </div>
 
       <!-- Marquee/rubber-band selection box (select tool only) -->
       <div
@@ -166,7 +175,6 @@
     <div *ngIf="canvas.nodes().length === 0" class="empty-hint">
       <i class="pi pi-sitemap"></i>
       <p>Double-click the canvas to add your first grind node</p>
-      <p class="hint-sub">Or click <strong>Add Node</strong> in the toolbar</p>
     </div>
 
     <!-- Bottom tool command bar -->
@@ -198,7 +206,36 @@
           <path d="M16.4 12.8V9.6a1.4 1.4 0 0 1 2.8 0v6.2c0 3.4-1.9 5.7-5.7 5.7h-1.9c-2.8 0-4.2-.9-5.6-2.8l-2.7-4.1c-.6-.9.2-1.9 1.1-1.7.5.1.9.4 1.2.9L8 15" />
         </svg>
       </button>
+
+      <div class="tool-sep"></div>
+
+      <button type="button" class="tool-btn" (click)="zoomOut()" pTooltip="Zoom out" tooltipPosition="top" aria-label="Zoom out">
+        <i class="pi pi-minus"></i>
+      </button>
+      <input
+        #zoomInput
+        type="text"
+        inputmode="decimal"
+        class="zoom-input"
+        aria-label="Zoom level"
+        [value]="(zoom() * 100 | number:'1.0-0') + '%'"
+        (focus)="zoomInput.select()"
+        (keydown.enter)="zoomInput.blur()"
+        (keydown.escape)="cancelZoomInput(zoomInput)"
+        (blur)="commitZoomInput(zoomInput)"
+        (mousedown)="$event.stopPropagation()"
+      />
+      <button type="button" class="tool-btn" (click)="zoomIn()" pTooltip="Zoom in" tooltipPosition="top" aria-label="Zoom in">
+        <i class="pi pi-plus"></i>
+      </button>
+      <button type="button" class="tool-btn" (click)="resetZoom()" pTooltip="Reset zoom to 100%" tooltipPosition="top" aria-label="Reset zoom">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="M15.3 15.3 20 20" />
+        </svg>
+      </button>
     </div>
+  </div>
   </div>
 
   <!-- Context menu (at workspace level, outside the transformed world) -->
@@ -218,7 +255,7 @@
   />
 
   <p-toast position="bottom-right">
-    <ng-template let-message let-closeFn="closeFn" #message>
+    <ng-template let-message #message>
       <i class="pi toast-icon"
          [class.pi-check-circle]="message.severity === 'success'"
          [class.pi-times-circle]="message.severity === 'error'"
@@ -234,7 +271,7 @@
         pButton
         size="small"
         class="toast-undo-btn"
-        (click)="message.data.undo(); closeFn()"
+        (click)="undoFromToast(message)"
       >Undo</button>
     </ng-template>
   </p-toast>

@@ -30,10 +30,17 @@ export class ItemSearchService {
   private getMapping(): Promise<ItemMappingEntry[]> {
     if (this.mapping) return Promise.resolve(this.mapping);
     if (!this.mappingPromise) {
-      this.mappingPromise = fetchItemMapping().then(m => {
-        this.mapping = m;
-        return m;
-      });
+      this.mappingPromise = fetchItemMapping().then(
+        m => {
+          this.mapping = m;
+          return m;
+        },
+        err => {
+          // Don't cache the failure — let the next search try again instead of staying broken all session.
+          this.mappingPromise = null;
+          throw err;
+        },
+      );
     }
     return this.mappingPromise;
   }

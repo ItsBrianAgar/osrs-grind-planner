@@ -9,62 +9,22 @@
   flex-direction: column;
   height: 100%;
   background-color: #100e08;
-  background-image: radial-gradient(circle, #2a2416 1.2px, transparent 1.2px);
-  // background-size and background-position set dynamically via [style]
 }
 
-// ── Toolbar ────────────────────────────────────────────────────────────────
-
-.toolbar {
+.workspace-body {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: #1a1710;
-  border-bottom: 1px solid #3a2e14;
-  flex-shrink: 0;
-  z-index: 100;
-}
-
-.toolbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #c8a34a;
-  letter-spacing: 0.5px;
-  margin-right: 8px;
-  white-space: nowrap;
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex: 1;
-}
-
-.toolbar-zoom {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.zoom-label {
-  font-size: 12px;
-  color: #9a8860;
-  min-width: 40px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+  min-height: 0;
 }
 
 // ── Viewport & World ───────────────────────────────────────────────────────
 
 .viewport {
   flex: 1;
+  min-width: 0;
   position: relative;
+  // Grid dots: background-image/size/position set dynamically via [style], relative to the
+  // viewport so they stay aligned with the canvas when the boards panel opens/closes.
   overflow: hidden;
   cursor: default;
 
@@ -103,6 +63,11 @@
   &.conn-target {
     border-color: #80e880;
     box-shadow: 0 0 0 2px rgba(128, 232, 128, 0.4);
+  }
+
+  &.splice-source {
+    border-color: #60c0ff;
+    box-shadow: 0 0 0 2px rgba(96, 192, 255, 0.4), 0 0 28px rgba(96, 192, 255, 0.2);
   }
 
   // Every member is gated by an incomplete prereq — same dimmed treatment as a locked node.
@@ -277,6 +242,7 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 6px;
   background: #1a1710;
@@ -310,6 +276,44 @@
     background: #3a2e14;
     color: #f0c040;
   }
+
+  .pi {
+    font-size: 13px;
+  }
+}
+
+// Divides the tool group from the zoom controls.
+.tool-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #3a2e14;
+}
+
+.zoom-input {
+  width: 52px;
+  height: 28px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #0e0c07; // same as the sidebar's board tiles at rest
+  color: #9a8860;
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+
+  &:hover {
+    border-color: #3a2e14;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #c8a34a;
+    background: #100e08;
+    color: #e8d5a3;
+  }
 }
 
 // ── Empty state hint ────────────────────────────────────────────────────────
@@ -335,11 +339,89 @@
     font-size: 15px;
     margin: 0 0 6px;
   }
+}
 
-  .hint-sub {
-    font-size: 13px;
-    opacity: 0.7;
+// ── Insert-into-connection preview ─────────────────────────────────────────
+
+.splice-label {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+// Gap between the label and the node edge, and the scale origin, both on the node-facing side.
+.splice-label--top { transform-origin: 50% 100%; padding-bottom: 14px; }
+.splice-label--bottom { transform-origin: 50% 0; padding-top: 14px; }
+.splice-label--right { transform-origin: 0 50%; padding-left: 14px; align-items: flex-start; }
+.splice-label--left { transform-origin: 100% 50%; padding-right: 14px; align-items: flex-end; }
+
+.splice-label-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #0f2233;
+  border: 1px solid #60c0ff;
+  color: #d6eeff;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  // backwards: stays hidden through any animation-delay (the charging pill waits out the grace period).
+  animation: splice-pop 180ms ease-out backwards;
+
+  .splice-icon {
+    flex-shrink: 0;
+    fill: none;
+    stroke: #60c0ff;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
+}
+
+// Charging (still holding on the line): quieter pill, with a bar along its bottom edge that
+// fills over the dwell time — the same duration as the fill running along the wire itself.
+.splice-label-inner.charging {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(96, 192, 255, 0.45);
+  color: rgba(214, 238, 255, 0.75);
+  font-weight: 500;
+}
+
+.splice-charge-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: #60c0ff;
+  transform-origin: left;
+  animation: splice-charge linear both;
+}
+
+@keyframes splice-charge {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.splice-label-hint {
+  font-size: 10px;
+  color: rgba(214, 238, 255, 0.55);
+}
+
+@keyframes splice-pop {
+  from { opacity: 0; scale: 0.92; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splice-label-inner { animation: none; }
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────

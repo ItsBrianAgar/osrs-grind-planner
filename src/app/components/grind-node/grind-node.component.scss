@@ -49,6 +49,14 @@
       0 4px 20px rgba(0, 0, 0, 0.6);
   }
 
+  &.splice-source {
+    border-color: #60c0ff;
+    box-shadow:
+      0 0 0 2px rgba(96, 192, 255, 0.45),
+      0 0 24px rgba(96, 192, 255, 0.25),
+      0 4px 20px rgba(0, 0, 0, 0.6);
+  }
+
   &.conn-target {
     border-color: #80e880;
     box-shadow:
