@@ -406,6 +406,80 @@ export class CanvasService {
     };
   }
 
+  /** Replaces a board's canvas, open or not, and saves it straight away. */
+  private setBoardData(id: string, data: CanvasSnapshot): void {
+    if (id === this.activeBoardId()) {
+      this.snapshot(); // so Cmd/Ctrl+Z can step back over it too
+      this.restore(data);
+      this.flushSave();
+    } else {
+      const history = this.histories.get(id) ?? { undo: [], redo: [] };
+      history.undo.push(this.readBoard(id));
+      history.redo = [];
+      this.histories.set(id, history);
+      this.boardCache.set(id, data);
+      this.tryWrite(boardDataKey(id), data);
+    }
+  }
+
+  /** Empties boards — removes every node, connection and group name — but keeps the boards
+   *  themselves (name, place in the list, view). Returns a function that puts their contents
+   *  back, for an Undo button. */
+  clearBoards(ids: Iterable<string>): () => void {
+    const existing = new Set(this.boards().map(b => b.id));
+    const saved = [...new Set(ids)].filter(id => existing.has(id)).map(id => ({ id, data: this.readBoard(id) }));
+    for (const { id } of saved) this.setBoardData(id, EMPTY_SNAPSHOT);
+
+    return () => {
+      for (const { id, data } of saved) {
+        if (this.boards().some(b => b.id === id)) this.setBoardData(id, data);
+      }
+    };
+  }
+
+  /** Deletes every board and everything on them, leaving one new empty board. Returns a function
+   *  that brings them all back (boards made since are kept, after them), for an Undo button. */
+  clearAllBoards(): () => void {
+    this.flushSave();
+    const prevBoards = this.boards();
+    const prevActive = this.activeBoardId();
+    const saved = new Map(prevBoards.map(b => [b.id, this.readBoard(b.id)]));
+
+    const fresh: BoardMeta = { id: crypto.randomUUID(), name: 'My board' };
+    this.tryWrite(boardDataKey(fresh.id), EMPTY_SNAPSHOT);
+    this.boards.set([fresh]);
+    this.loadBoard(fresh.id, EMPTY_SNAPSHOT);
+    this.boardCache.clear();
+    this.histories.clear();
+    for (const id of saved.keys()) this.removeBoardKey(id);
+
+    return () => {
+      this.flushSave();
+      // The empty board that replaced them goes again, unless something's been added to it.
+      const keepFresh = this.readBoard(fresh.id).nodes.length > 0;
+      const since = this.boards().filter(b => !saved.has(b.id) && (keepFresh || b.id !== fresh.id));
+      for (const [id, data] of saved) {
+        this.boardCache.set(id, data);
+        this.tryWrite(boardDataKey(id), data);
+      }
+      this.boards.set([...prevBoards, ...since]);
+      this.loadBoard(prevActive, saved.get(prevActive)!);
+      if (!keepFresh) {
+        this.boardCache.delete(fresh.id);
+        this.histories.delete(fresh.id);
+        this.removeBoardKey(fresh.id);
+      }
+    };
+  }
+
+  private removeBoardKey(id: string): void {
+    try {
+      localStorage.removeItem(boardDataKey(id));
+    } catch {
+      // An orphaned key is harmless.
+    }
+  }
+
   // ── Undo / redo ──────────────────────────────────────────────────────────
   // Whole-state snapshots rather than per-action inverses — simplest way to make an arbitrary
   // mix of node/connection/group-name mutations undoable without hand-writing an inverse for

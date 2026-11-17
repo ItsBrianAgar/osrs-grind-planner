@@ -434,6 +434,9 @@
   border-color: #100e08 !important;
   color: #ffffff !important;
   font-weight: 700;
+  // Never squeezed by a long message beside it — the label stays on one line.
+  flex-shrink: 0;
+  white-space: nowrap;
 
   &:hover {
     background: #2a2518 !important;

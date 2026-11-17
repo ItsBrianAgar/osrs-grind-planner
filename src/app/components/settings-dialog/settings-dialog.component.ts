@@ -1,9 +1,13 @@
-import { Component, ElementRef, inject, Input, Output, EventEmitter, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, Input, Output, EventEmitter, ViewChild, computed, signal } from '@angular/core';
+import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule, ToggleSwitchChangeEvent } from 'primeng/toggleswitch';
-import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { InputTextModule } from 'primeng/inputtext';
+import { spriteUrl } from '../../../plugins/osrs-item-kit/spriteUrl';
+import { AutofocusSelectDirective } from '../../directives/autofocus-select.directive';
 import { MessageService } from 'primeng/api';
 import { SettingsService, Theme } from '../../services/settings.service';
 import { CanvasService } from '../../services/canvas.service';
@@ -16,7 +20,7 @@ function slugify(name: string): string {
 @Component({
   selector: 'app-settings-dialog',
   standalone: true,
-  imports: [FormsModule, DialogModule, ButtonModule, ToggleSwitchModule, SelectModule],
+  imports: [NgFor, NgIf, FormsModule, DialogModule, ButtonModule, ToggleSwitchModule, MultiSelectModule, InputTextModule, AutofocusSelectDirective],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
@@ -28,6 +32,89 @@ export class SettingsDialogComponent {
   readonly settings = inject(SettingsService);
   private readonly canvas = inject(CanvasService);
   private readonly msg = inject(MessageService);
+
+  readonly tabs = [
+    { id: 'general', label: 'General', icon: 'pi-cog' },
+    { id: 'appearance', label: 'Appearance', icon: 'pi-palette' },
+    { id: 'danger', label: 'Danger zone', icon: 'pi-exclamation-triangle' },
+  ] as const;
+  readonly activeTab = signal<(typeof this.tabs)[number]['id']>('general');
+  readonly activeTabLabel = computed(() => this.tabs.find(t => t.id === this.activeTab())!.label);
+
+  // ── Danger zone ──
+  // Clearing goes through two confirmations: a yes/no "are you sure?", then typing the word
+  // below. Only then is anything deleted — with an Undo on the toast that follows.
+  readonly confirmWord = 'Guthix';
+  readonly boards = this.canvas.boards;
+  /** Boards picked in the "Clear boards" row. */
+  boardsToClear: string[] = [];
+  /** What's waiting on confirmation, and which of the two steps it's at. Null when not confirming. */
+  readonly pendingClear = signal<{ kind: 'boards'; ids: string[]; names: string[] } | { kind: 'all' } | null>(null);
+  readonly confirmStep = signal<1 | 2>(1);
+  confirmInput = '';
+
+  /** "Clear "Slayer"", "Clear 3 boards", "Clear all data" — names the action in the prompts. */
+  readonly pendingClearSummary = computed(() => {
+    const p = this.pendingClear();
+    if (!p) return '';
+    if (p.kind === 'all') return 'every board and everything on them';
+    return p.names.length === 1 ? `everything on "${p.names[0]}"` : `everything on ${p.names.length} boards (${p.names.map(n => `"${n}"`).join(', ')})`;
+  });
+
+  get confirmWordMatches(): boolean {
+    return this.confirmInput.trim().toLowerCase() === this.confirmWord.toLowerCase();
+  }
+
+  startClearBoards(): void {
+    const ids = this.boardsToClear.filter(id => this.boards().some(b => b.id === id));
+    if (ids.length === 0) return;
+    const names = ids.map(id => this.boards().find(b => b.id === id)!.name);
+    this.beginConfirm({ kind: 'boards', ids, names });
+  }
+
+  startClearAll(): void {
+    this.beginConfirm({ kind: 'all' });
+  }
+
+  private beginConfirm(pending: NonNullable<ReturnType<typeof this.pendingClear>>): void {
+    this.confirmInput = '';
+    this.confirmStep.set(1);
+    this.pendingClear.set(pending);
+  }
+
+  /** Step 1's "Yes" — on to typing the word. */
+  confirmYes(): void {
+    this.confirmStep.set(2);
+  }
+
+  cancelClear(): void {
+    this.pendingClear.set(null);
+    this.confirmInput = '';
+  }
+
+  /** Step 2 — only acts if the word was typed correctly. Closes settings so the toast (and its
+   *  Undo) isn't behind the dialog. */
+  confirmClear(): void {
+    const pending = this.pendingClear();
+    if (!pending || !this.confirmWordMatches) return;
+
+    const undo = pending.kind === 'all' ? this.canvas.clearAllBoards() : this.canvas.clearBoards(pending.ids);
+    this.msg.add({
+      severity: 'success',
+      summary: pending.kind === 'all' ? 'All data cleared' : pending.names.length === 1 ? 'Board cleared' : `${pending.names.length} boards cleared`,
+      detail: pending.kind === 'all'
+        ? 'Every board was deleted'
+        : `Removed everything on ${pending.names.map(n => `"${n}"`).join(', ')}`,
+      life: 10000,
+      data: { undo },
+    });
+    this.boardsToClear = [];
+    this.cancelClear();
+    this.close();
+  }
+
+  /** The Twisted bow's icon, for the sample node in the theme previews. */
+  readonly previewItemSprite = spriteUrl(20997);
 
   readonly themes: { label: string; value: Theme }[] = [
     { label: 'Default', value: 'default' },

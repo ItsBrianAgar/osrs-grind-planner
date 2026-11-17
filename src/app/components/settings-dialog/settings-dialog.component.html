@@ -1,73 +1,212 @@
+<!-- Two-pane settings: tabs down the left, the open tab's settings on the right. The dialog's own
+     header is hidden; the right pane carries the tab title and the close button. -->
 <p-dialog
   [visible]="visible"
   (visibleChange)="visibleChange.emit($event)"
-  header="Settings"
   [modal]="true"
   [draggable]="false"
-  [style]="{ width: '560px' }"
+  [resizable]="false"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [closeOnEscape]="true"
+  styleClass="settings-dialog"
+  [style]="{ width: '860px', maxWidth: 'calc(100vw - 32px)' }"
+  [contentStyle]="{ padding: '0', overflow: 'hidden' }"
   (onHide)="close()"
 >
-  <div class="section">
-    <div class="section-label">Appearance</div>
-    <div class="toggle-row">
-      <i class="pi pi-palette setting-icon"></i>
-      <div class="toggle-info">
-        <div class="toggle-name">Theme</div>
-        <div class="toggle-desc">How the canvas and sidebar look. In-game uses OSRS interface art and the RuneScape font.</div>
+  <div class="settings">
+    <nav class="settings-nav" aria-label="Settings sections">
+      <div class="nav-title">Settings</div>
+      <button
+        *ngFor="let t of tabs"
+        type="button"
+        class="nav-item"
+        [class.danger]="t.id === 'danger'"
+        [class.active]="activeTab() === t.id"
+        [attr.aria-current]="activeTab() === t.id ? 'page' : null"
+        (click)="activeTab.set(t.id)"
+      >
+        <i [class]="'pi ' + t.icon"></i>
+        <span>{{ t.label }}</span>
+      </button>
+    </nav>
+
+    <div class="settings-main">
+      <header class="main-header">
+        <span>{{ activeTabLabel() }}</span>
+        <button type="button" class="close-btn" aria-label="Close settings" (click)="close()">
+          <i class="pi pi-times"></i>
+        </button>
+      </header>
+
+      <div class="main-body">
+        <!-- ── General ── -->
+        <ng-container *ngIf="activeTab() === 'general'">
+          <section class="group">
+            <h2 class="group-title">Prerequisites</h2>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Use prerequisites</div>
+                <div class="row-desc">Connections gate their target — a node stays locked and dimmed until everything pointing into it is completed. Turn off to use connections as plain, non-gating links.</div>
+              </div>
+              <p-toggleswitch [ngModel]="settings.prereqsEnabled()" (onChange)="togglePrereqs($event)" />
+            </div>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Connections</h2>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Insert on drop</div>
+                <div class="row-desc">Hold a dragged node or group over a connection for a moment, then drop, to insert it in between — A → B becomes A → dropped → B. Turn off to drop over connections without changing them.</div>
+              </div>
+              <p-toggleswitch [ngModel]="settings.spliceOnDropEnabled()" (onChange)="toggleSpliceOnDrop($event)" />
+            </div>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Import &amp; export</h2>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Export this board</div>
+                <div class="row-desc">Download the open board as a file.</div>
+              </div>
+              <p-button label="Export" icon="pi pi-download" severity="secondary" (click)="exportBoard()" />
+            </div>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Export all boards</div>
+                <div class="row-desc">Download every board in one file.</div>
+              </div>
+              <p-button label="Export" icon="pi pi-download" severity="secondary" (click)="exportAllBoards()" />
+            </div>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Import</div>
+                <div class="row-desc">Takes either kind of export and adds what's in it as new boards — your existing boards are never overwritten.</div>
+              </div>
+              <p-button label="Import" icon="pi pi-upload" severity="secondary" (click)="triggerImport()" />
+              <input
+                #importInput
+                type="file"
+                accept="application/json"
+                hidden
+                (change)="onImportFileSelected($event)"
+              />
+            </div>
+          </section>
+        </ng-container>
+
+        <!-- ── Appearance ── -->
+        <ng-container *ngIf="activeTab() === 'appearance'">
+          <section class="group">
+            <h2 class="group-title">Theme</h2>
+            <p class="row-desc theme-intro">How the canvas and sidebar look.</p>
+            <!-- Each option shows a small group-and-node sample drawn in that theme's styles. -->
+            <div class="theme-options" role="radiogroup" aria-label="Theme">
+              <button
+                *ngFor="let t of themes"
+                type="button"
+                role="radio"
+                class="theme-option"
+                [class.selected]="settings.theme() === t.value"
+                [attr.aria-checked]="settings.theme() === t.value"
+                (click)="setTheme(t.value)"
+              >
+                <div
+                  class="theme-preview"
+                  [class.preview-in-game]="t.value === 'in-game'"
+                  style="--panel-image: url('ui/inventory-tab.png')"
+                  aria-hidden="true"
+                >
+                  <div class="pv-group">
+                    <span class="pv-group-label">Raids</span>
+                    <div class="pv-node">
+                      <span class="pv-avatar"><img [src]="previewItemSprite" alt="" draggable="false" /></span>
+                      <div class="pv-title">Twisted bow</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="theme-option-label">{{ t.label }}</div>
+              </button>
+            </div>
+          </section>
+        </ng-container>
+
+        <!-- ── Danger zone ── -->
+        <ng-container *ngIf="activeTab() === 'danger'">
+          <section class="group">
+            <h2 class="group-title">Clear data</h2>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Clear boards</div>
+                <div class="row-desc">Removes every node, connection and group from the boards you pick. The boards themselves stay, empty.</div>
+              </div>
+              <p-multiselect
+                class="board-picker"
+                [options]="boards()"
+                optionLabel="name"
+                optionValue="id"
+                [(ngModel)]="boardsToClear"
+                placeholder="Choose boards"
+                [maxSelectedLabels]="1"
+                selectedItemsLabel="{0} boards"
+                [showToggleAll]="true"
+                [filter]="false"
+                appendTo="body"
+              />
+              <p-button label="Clear" severity="danger" [outlined]="true" [disabled]="boardsToClear.length === 0" (click)="startClearBoards()" />
+            </div>
+            <div class="row">
+              <div class="row-info">
+                <div class="row-name">Clear all data</div>
+                <div class="row-desc">Deletes every board and everything on them, leaving one new empty board.</div>
+              </div>
+              <p-button label="Clear all data" severity="danger" (click)="startClearAll()" />
+            </div>
+          </section>
+        </ng-container>
       </div>
-      <p-select
-        class="theme-select"
-        [options]="themes"
-        optionLabel="label"
-        optionValue="value"
-        [ngModel]="settings.theme()"
-        (ngModelChange)="setTheme($event)"
-        [checkmark]="true"
-        appendTo="body"
-      />
     </div>
   </div>
+</p-dialog>
 
-  <div class="section">
-    <div class="section-label">Prerequisites</div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <div class="toggle-name">Use prerequisites</div>
-        <div class="toggle-desc">Connections gate their target — a node stays locked and dimmed until everything pointing into it is completed. Turn off to use connections as plain, non-gating links.</div>
-      </div>
-      <p-toggleswitch [ngModel]="settings.prereqsEnabled()" (onChange)="togglePrereqs($event)" />
+<!-- Two-step confirmation for clearing data: "are you sure?" (yes/no), then type the word. -->
+<p-dialog
+  [visible]="!!pendingClear()"
+  (visibleChange)="!$event && cancelClear()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="true"
+  [closeOnEscape]="true"
+  appendTo="body"
+  [header]="confirmStep() === 1 ? 'Are you sure?' : 'Confirm deletion'"
+  [style]="{ width: '420px', maxWidth: 'calc(100vw - 32px)' }"
+>
+  <ng-container *ngIf="confirmStep() === 1">
+    <p class="confirm-text">This will delete {{ pendingClearSummary() }}.</p>
+    <div class="confirm-actions">
+      <p-button label="No" severity="secondary" (click)="cancelClear()" />
+      <p-button label="Yes" severity="danger" (click)="confirmYes()" />
     </div>
-  </div>
+  </ng-container>
 
-  <div class="section">
-    <div class="section-label">Connections</div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <div class="toggle-name">Insert on drop</div>
-        <div class="toggle-desc">Hold a dragged node or group over a connection for a moment, then drop, to insert it in between — A → B becomes A → dropped → B. Turn off to drop over connections without changing them.</div>
-      </div>
-      <p-toggleswitch [ngModel]="settings.spliceOnDropEnabled()" (onChange)="toggleSpliceOnDrop($event)" />
+  <form *ngIf="confirmStep() === 2" (ngSubmit)="confirmClear()">
+    <p class="confirm-text">To delete {{ pendingClearSummary() }}, type <strong class="confirm-word">{{ confirmWord }}</strong> below.</p>
+    <input
+      pInputText
+      class="confirm-input"
+      name="confirm"
+      [(ngModel)]="confirmInput"
+      [placeholder]="confirmWord"
+      autocomplete="off"
+      spellcheck="false"
+      appAutofocusSelect
+    />
+    <div class="confirm-actions">
+      <p-button label="Cancel" severity="secondary" (click)="cancelClear()" />
+      <p-button type="submit" label="Delete" severity="danger" [disabled]="!confirmWordMatches" />
     </div>
-  </div>
-
-  <div class="section">
-    <div class="section-label">Data</div>
-    <div class="data-actions">
-      <p-button label="Export this board" icon="pi pi-download" severity="secondary" (click)="exportBoard()" />
-      <p-button label="Export all boards" icon="pi pi-download" severity="secondary" (click)="exportAllBoards()" />
-      <p-button label="Import" icon="pi pi-upload" severity="secondary" (click)="triggerImport()" />
-      <input
-        #importInput
-        type="file"
-        accept="application/json"
-        hidden
-        (change)="onImportFileSelected($event)"
-      />
-    </div>
-    <div class="toggle-desc">Import takes either kind of export and adds what's in it as new boards — your existing boards are never overwritten.</div>
-  </div>
-
-  <ng-template pTemplate="footer">
-    <p-button label="Done" (click)="close()" />
-  </ng-template>
+  </form>
 </p-dialog>

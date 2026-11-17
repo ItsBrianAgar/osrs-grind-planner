@@ -371,3 +371,57 @@ describe('CanvasService saving', () => {
     expect(canvas.saveError()).toBeNull();
   });
 });
+
+describe('CanvasService clearing data', () => {
+  it('empties the chosen boards (open or not) but keeps them, and undo puts the contents back', () => {
+    const first = canvas.activeBoardId();
+    const a = canvas.addNode(0, 0);
+    canvas.groupNodesTogether([a, canvas.addNode(300, 0)]);
+    const second = canvas.createBoard('Second');
+    canvas.addNode(0, 0);
+    const third = canvas.createBoard('Third');
+    canvas.addNode(0, 0);
+
+    const undo = canvas.clearBoards([first, third]);
+    expect(canvas.boards().map(b => b.name)).toEqual(['My board', 'Second', 'Third']);
+    expect(canvas.nodes()).toEqual([]); // the open board (Third)
+    canvas.switchBoard(first);
+    expect(canvas.nodes()).toEqual([]);
+    expect(canvas.groupNames()).toEqual({});
+    canvas.switchBoard(second);
+    expect(canvas.nodes().length).toBe(1); // not chosen — untouched
+
+    undo();
+    canvas.switchBoard(first);
+    expect(canvas.nodes().length).toBe(2);
+    expect(canvas.getNode(a)?.groupId).toBeDefined();
+    canvas.switchBoard(third);
+    expect(canvas.nodes().length).toBe(1);
+  });
+
+  it('wipes every board down to one empty board, and undo brings them all back', () => {
+    canvas.addNode(0, 0);
+    const second = canvas.createBoard('Second');
+    canvas.addNode(0, 0);
+    canvas.addNode(100, 0);
+    const before = canvas.boards();
+
+    const undo = canvas.clearAllBoards();
+    expect(canvas.boards().length).toBe(1);
+    expect(canvas.nodes()).toEqual([]);
+    expect(localStorage.getItem(`osrs-board-${second}`)).toBeNull();
+
+    undo();
+    expect(canvas.boards()).toEqual(before);
+    expect(canvas.activeBoardId()).toBe(second);
+    expect(canvas.nodes().length).toBe(2);
+  });
+
+  it('keeps boards made after wiping when undoing', () => {
+    canvas.addNode(0, 0);
+    const undo = canvas.clearAllBoards();
+    canvas.addNode(0, 0); // on the new empty board — so it's kept
+    undo();
+    expect(canvas.boards().length).toBe(2);
+  });
+});
