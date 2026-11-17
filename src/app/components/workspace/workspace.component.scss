@@ -441,3 +441,61 @@
     border-color: #2a2518 !important;
   }
 }
+
+// ── In-game theme ──────────────────────────────────────────────────────────
+// Groups are drawn from the inventory-tab panel image, with names in the RuneScape pixel font.
+
+:host-context(.theme-in-game) {
+  // The image as a 9-slice (border-image): the 12px frame and corners keep their size at any group
+  // size, and the middle stretches to fill. The URL comes from --panel-image, set in the template.
+  .group-bg {
+    background: none;
+    border: 12px solid;
+    border-image-source: var(--panel-image);
+    border-image-slice: 12 fill;
+    border-image-repeat: stretch;
+    border-radius: 0;
+    image-rendering: pixelated;
+
+    // Dims the image. A layer on top rather than a filter, so the highlight rings keep their full
+    // colour. inset -12px reaches over the frame too.
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      background: rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
+
+    // The frame image ignores border-color, so highlights are a solid ring around it instead.
+    &.conn-target {
+      box-shadow: 0 0 0 2px #80e880;
+    }
+
+    &.splice-source {
+      box-shadow: 0 0 0 2px #60c0ff, 0 0 28px rgba(96, 192, 255, 0.2);
+    }
+  }
+
+  .group-header {
+    top: 11px; // clear of the panel's frame
+  }
+
+  // Pixel font at its native 16px, mixed case (it reads better than capitals).
+  .group-label,
+  .group-name-input {
+    font-family: 'RuneScape Bold', sans-serif;
+    font-size: 16px;
+    font-weight: normal; // already bold
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .group-label {
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .group-name-input {
+    width: 140px;
+  }
+}

@@ -3,8 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule, ToggleSwitchChangeEvent } from 'primeng/toggleswitch';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
-import { SettingsService } from '../../services/settings.service';
+import { SettingsService, Theme } from '../../services/settings.service';
 import { CanvasService } from '../../services/canvas.service';
 
 /** "Ironman: Quest cape!" → "ironman-quest-cape", for download file names. */
@@ -15,7 +16,7 @@ function slugify(name: string): string {
 @Component({
   selector: 'app-settings-dialog',
   standalone: true,
-  imports: [FormsModule, DialogModule, ButtonModule, ToggleSwitchModule],
+  imports: [FormsModule, DialogModule, ButtonModule, ToggleSwitchModule, SelectModule],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
@@ -27,6 +28,15 @@ export class SettingsDialogComponent {
   readonly settings = inject(SettingsService);
   private readonly canvas = inject(CanvasService);
   private readonly msg = inject(MessageService);
+
+  readonly themes: { label: string; value: Theme }[] = [
+    { label: 'Default', value: 'default' },
+    { label: 'In-game', value: 'in-game' },
+  ];
+
+  setTheme(theme: Theme): void {
+    this.settings.setTheme(theme);
+  }
 
   togglePrereqs(event: ToggleSwitchChangeEvent): void {
     this.settings.setPrereqsEnabled(event.checked);

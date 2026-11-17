@@ -6,6 +6,14 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="dev-logo.svg" />
+    <!-- RuneScape pixel fonts (from RuneLite), used on the canvas. Declared here rather than in a
+         stylesheet so the relative URLs resolve against the page — that keeps them working on the
+         GitHub Pages subpath. They're pixel fonts: they look sharpest at 16px. -->
+    <style>
+      @font-face { font-family: 'RuneScape'; src: url('fonts/runescape.ttf') format('truetype'); font-display: swap; }
+      @font-face { font-family: 'RuneScape Bold'; src: url('fonts/runescape_bold.ttf') format('truetype'); font-display: swap; }
+      @font-face { font-family: 'RuneScape Small'; src: url('fonts/runescape_small.ttf') format('truetype'); font-display: swap; }
+    </style>
   </head>
   <body>
     <app-root></app-root>

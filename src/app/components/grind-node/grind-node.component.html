@@ -8,6 +8,7 @@
   [class.conn-target]="isConnTarget"
   [class.splice-source]="isSpliceSource"
   [class.locked]="locked"
+  [class.in-group]="!!node.groupId"
   [class.tool-hand]="tools.effectiveTool() === 'hand'"
   [style]="cardStyle"
   (mousedown)="onMouseDown($event)"
@@ -30,6 +31,7 @@
       shape="circle"
       size="normal"
       class="node-avatar"
+      [class.has-image]="!!node.avatarUrl"
     />
     <div class="node-title">{{ node.title }}</div>
     <i *ngIf="node.completed" class="pi pi-check-circle completed-icon"></i>

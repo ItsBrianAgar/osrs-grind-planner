@@ -165,3 +165,45 @@ $rail-width: 52px;
     outline: none;
   }
 }
+
+// ── In-game theme ──────────────────────────────────────────────────────────
+// Board tiles are drawn from the interface-border image (URL in --tile-image, set in the
+// template), at its native 41px with crisp pixels, with the letter in the RuneScape pixel font.
+// Boards that aren't open are faded back so the open one stands out.
+
+:host-context(.theme-in-game) {
+  .rail-board {
+    width: 41px;
+    height: 41px;
+    border: none;
+    border-radius: 0;
+    background: var(--tile-image) 0 0 / 41px 41px no-repeat;
+    image-rendering: pixelated;
+    font-family: 'RuneScape Bold', sans-serif;
+    font-size: 16px;
+    font-weight: normal; // already bold
+    text-shadow: 1px 1px 0 #000;
+    opacity: 0.55;
+    transition: color 0.12s, filter 0.12s, opacity 0.12s;
+
+    &:hover {
+      filter: brightness(1.15);
+      opacity: 0.85;
+    }
+
+    &.active {
+      filter: brightness(1.35);
+      opacity: 1;
+    }
+
+    &.cdk-drag-preview {
+      opacity: 1;
+    }
+
+    &.cdk-drag-placeholder {
+      background: transparent;
+      border: 1px dashed #4a3e22;
+      filter: none;
+    }
+  }
+}

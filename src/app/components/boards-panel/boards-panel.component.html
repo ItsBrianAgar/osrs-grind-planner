@@ -21,6 +21,7 @@
         [cdkDragDisabled]="!!renaming()"
         type="button"
         class="rail-item rail-board"
+        style="--tile-image: url('ui/interface-border.png')"
         [class.active]="b.id === canvas.activeBoardId()"
         [attr.data-board-id]="b.id"
         (click)="canvas.switchBoard(b.id)"

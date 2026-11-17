@@ -7,12 +7,17 @@
 .grind-node {
   position: absolute;
   width: 240px;
-  background: #1e1a10;
-  border: 1.5px solid #5a4210;
+  // Resting background/border as variables, so a theme can swap them without out-ranking the
+  // state rules below (hover, selected, …) that set their own border-color.
+  background: var(--node-bg, #8b631418);
+  border: 1.5px solid var(--node-border, #5a4210);
   border-radius: 6px;
   cursor: grab;
   user-select: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  // Drop shadow, shared by every state below that keeps one (the in-game theme lightens it
+  // inside groups).
+  --drop-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--drop-shadow);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -32,7 +37,7 @@
     border-color: #f0c040;
     box-shadow:
       0 0 0 2px rgba(240, 192, 64, 0.35),
-      0 4px 20px rgba(0, 0, 0, 0.6);
+      var(--drop-shadow);
     z-index: 10;
   }
 
@@ -46,7 +51,7 @@
     border-color: #60c0ff;
     box-shadow:
       0 0 0 2px rgba(96, 192, 255, 0.4),
-      0 4px 20px rgba(0, 0, 0, 0.6);
+      var(--drop-shadow);
   }
 
   &.splice-source {
@@ -54,14 +59,14 @@
     box-shadow:
       0 0 0 2px rgba(96, 192, 255, 0.45),
       0 0 24px rgba(96, 192, 255, 0.25),
-      0 4px 20px rgba(0, 0, 0, 0.6);
+      var(--drop-shadow);
   }
 
   &.conn-target {
     border-color: #80e880;
     box-shadow:
       0 0 0 2px rgba(128, 232, 128, 0.4),
-      0 4px 20px rgba(0, 0, 0, 0.6);
+      var(--drop-shadow);
   }
 
   // Green marks completion; how opaque it is marks interaction — hovering or selecting stays
@@ -90,7 +95,7 @@
     &.selected {
       box-shadow:
         0 0 0 2px rgba(107, 207, 107, 0.35),
-        0 4px 20px rgba(0, 0, 0, 0.6);
+        var(--drop-shadow);
     }
   }
 
@@ -292,5 +297,83 @@
   .conn-port:hover & {
     background: #ffd700;
     transform: scale(1.3);
+  }
+}
+
+// ── In-game theme ─────────────────────────────────────────────────────────────
+// OSRS interface art: the card is drawn from the inventory-tab panel image (darker than the group
+// panels around it), item sprites sit straight on it, and text uses the RuneScape pixel fonts
+// with the game's hard 1px black shadow.
+
+:host-context(.theme-in-game) {
+  .grind-node {
+    // The panel image draws the card's frame; states still set border-color, redrawn over the
+    // image's edge by ::after.
+    --node-bg: transparent;
+    --node-border: transparent;
+    border-radius: 2px;
+
+    // The image as a 9-slice: the 12px frame and corners at native size with crisp pixels, the
+    // middle stretched to fill. Behind the card's content (z-index -1 within the card), out over
+    // the 1.5px border so it reaches the very edge; the filter darkens only this layer.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      z-index: -1;
+      border-style: solid;
+      border-width: 12px;
+      border-image-source: var(--panel-image);
+      border-image-slice: 12 fill;
+      image-rendering: pixelated;
+      filter: brightness(0.6);
+      pointer-events: none;
+    }
+
+    // State border colours (hover, selected, completed…) as a ring over the image. Below the ports.
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      z-index: 1;
+      border: 1.5px solid;
+      border-color: inherit;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    // Inside a group the card sits on the group's panel rather than the dark canvas.
+    &.in-group {
+      --drop-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  // An item sprite sits straight on the card, shown in full (nothing to clip to), with a faint
+  // shadow that follows its outline. Nodes without an image keep the circle behind their letter.
+  .node-avatar.has-image {
+    background: transparent;
+    border: none;
+    overflow: visible;
+
+    ::ng-deep img {
+      border-radius: 0;
+      filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3));
+    }
+  }
+
+  // Pixel fonts look sharpest at their native 16px. font-weight normal: no browser-faked bold.
+  .node-title {
+    font-family: 'RuneScape', sans-serif;
+    font-size: 16px;
+    font-weight: normal;
+    text-shadow: 1px 1px 0 #000;
+    line-height: 1.1;
+  }
+
+  .node-notes {
+    font-family: 'RuneScape Small', sans-serif;
+    font-size: 16px; // its glyphs are small
+    text-shadow: 1px 1px 0 #000;
+    line-height: 1.1;
   }
 }

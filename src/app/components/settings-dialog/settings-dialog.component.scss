@@ -34,6 +34,19 @@ $text-muted: #9a8860;
   flex: 1;
 }
 
+// Leading icon on a setting row, aligned with the setting's name.
+.setting-icon {
+  align-self: flex-start;
+  margin-top: 1px;
+  font-size: 16px;
+  color: $text-primary;
+}
+
+.theme-select {
+  flex-shrink: 0;
+  width: 140px;
+}
+
 .toggle-name {
   font-size: 13px;
   font-weight: 600;

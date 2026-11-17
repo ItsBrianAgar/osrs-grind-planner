@@ -27,6 +27,7 @@
       <div
         *ngFor="let g of groupBounds(); trackBy: trackGroup"
         class="group-bg"
+        style="--panel-image: url('ui/inventory-tab.png')"
         [class.conn-target]="connTarget()?.kind === 'group' && connTarget()?.id === g.id"
         [class.splice-source]="isSpliceSource(g.id, 'group')"
         [class.locked]="isGroupLocked(g.id)"

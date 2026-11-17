@@ -2,6 +2,11 @@ import { Injectable, signal } from '@angular/core';
 
 const PREREQS_ENABLED_KEY = 'osrs-prereqs-enabled';
 const SPLICE_ON_DROP_KEY = 'osrs-splice-on-drop';
+const THEME_KEY = 'osrs-theme';
+
+/** 'default' is the app's own look; 'in-game' dresses the canvas and sidebar in OSRS interface
+ *  art (panel and slot images, RuneScape pixel fonts). */
+export type Theme = 'default' | 'in-game';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
@@ -26,5 +31,22 @@ export class SettingsService {
   setSpliceOnDropEnabled(enabled: boolean): void {
     this.spliceOnDropEnabled.set(enabled);
     localStorage.setItem(SPLICE_ON_DROP_KEY, String(enabled));
+  }
+
+  readonly theme = signal<Theme>(localStorage.getItem(THEME_KEY) === 'in-game' ? 'in-game' : 'default');
+
+  constructor() {
+    this.applyTheme();
+  }
+
+  setTheme(theme: Theme): void {
+    this.theme.set(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    this.applyTheme();
+  }
+
+  /** Themes are styled with a class on <html> (components match it with :host-context). */
+  private applyTheme(): void {
+    document.documentElement.classList.toggle('theme-in-game', this.theme() === 'in-game');
   }
 }

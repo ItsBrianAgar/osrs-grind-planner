@@ -10,7 +10,7 @@ import { ConnectionsLayerComponent, PendingConnection, ReconnectingEnd, SplicePr
 import { NodeEditorComponent } from '../node-editor/node-editor.component';
 import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.component';
 import { BoardsPanelComponent } from '../boards-panel/boards-panel.component';
-import { GrindNode, NODE_WIDTH, NODE_HEIGHT, GROUP_PADDING, GROUP_HEADER_HEIGHT, NodeSide } from '../../models/grind-node.model';
+import { GrindNode, NODE_WIDTH, NODE_HEIGHT, GROUP_PADDING, GROUP_PADDING_BOTTOM, GROUP_HEADER_HEIGHT, IN_GAME_GROUP_HEADER_HEIGHT, IN_GAME_GROUP_PADDING_BOTTOM, NodeSide } from '../../models/grind-node.model';
 import { EndpointKind, NodeConnection } from '../../models/connection.model';
 import { GroupBound } from '../../models/group.model';
 import { ButtonModule } from 'primeng/button';
@@ -209,12 +209,15 @@ export class WorkspaceComponent {
       map.set(n.groupId, g);
     }
 
+    const inGame = this.settings.theme() === 'in-game';
+    const header = inGame ? IN_GAME_GROUP_HEADER_HEIGHT : GROUP_HEADER_HEIGHT;
+    const bottom = inGame ? IN_GAME_GROUP_PADDING_BOTTOM : GROUP_PADDING_BOTTOM;
     return [...map.entries()].map(([id, g]) => ({
       id,
       x: g.minX - GROUP_PADDING,
-      y: g.minY - GROUP_HEADER_HEIGHT,
+      y: g.minY - header,
       width: g.maxX - g.minX + GROUP_PADDING * 2,
-      height: g.maxY - g.minY + GROUP_PADDING + GROUP_HEADER_HEIGHT,
+      height: g.maxY - g.minY + bottom + header,
     }));
   });
 

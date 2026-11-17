@@ -8,6 +8,27 @@
   (onHide)="close()"
 >
   <div class="section">
+    <div class="section-label">Appearance</div>
+    <div class="toggle-row">
+      <i class="pi pi-palette setting-icon"></i>
+      <div class="toggle-info">
+        <div class="toggle-name">Theme</div>
+        <div class="toggle-desc">How the canvas and sidebar look. In-game uses OSRS interface art and the RuneScape font.</div>
+      </div>
+      <p-select
+        class="theme-select"
+        [options]="themes"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="settings.theme()"
+        (ngModelChange)="setTheme($event)"
+        [checkmark]="true"
+        appendTo="body"
+      />
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-label">Prerequisites</div>
     <div class="toggle-row">
       <div class="toggle-info">
