@@ -915,6 +915,43 @@ export class WorkspaceComponent {
     this.ctxMenu.show(e.event);
   }
 
+  /** Right-click on a connection line: put a new node in the middle of it, or remove it. */
+  onConnectionContextMenu(e: { event: MouseEvent; connId: string }): void {
+    this.contextMenuItems = [
+      { label: 'Insert node', icon: 'pi pi-plus-circle', command: () => this.insertNodeIntoConnection(e.connId) },
+      { separator: true },
+      { label: 'Unlink', icon: 'pi pi-link', command: () => this.deleteConnection(e.connId) },
+    ];
+    this.ctxMenu.show(e.event);
+  }
+
+  /** A new node centred on the line's midpoint, wired in between the line's two ends
+   *  (A → B becomes A → new → B), then opened for editing — one undo step. */
+  private insertNodeIntoConnection(connId: string): void {
+    const at = this.connectionMidpoint(connId);
+    if (!at) return;
+    this.canvas.snapshot();
+    const id = this.canvas.addNode(Math.round(at.x - NODE_WIDTH / 2), Math.round(at.y - NODE_HEIGHT / 2));
+    const plan = this.splicePlan(connId, { id, kind: 'node' });
+    if (!plan || !this.canvas.spliceIntoConnection(connId, id, 'node', plan.inSide, plan.outSide)) {
+      this.canvas.deleteNode(id);
+      return;
+    }
+    this.canvas.selectOnly(id);
+    this.editingNodeId.set(id);
+  }
+
+  /** The point halfway along a connection's curve, in world coordinates. */
+  private connectionMidpoint(connId: string): { x: number; y: number } | null {
+    const conn = this.canvas.connections().find(c => c.id === connId);
+    const from = conn && this.resolveTargetBox(conn.fromId, conn.fromKind);
+    const to = conn && this.resolveTargetBox(conn.toId, conn.toKind);
+    if (!conn || !from || !to) return null;
+    const p1 = sidePoint(from.box, conn.fromSide, from.size);
+    const p2 = sidePoint(to.box, conn.toSide, to.size);
+    return sampleBezier(p1, conn.fromSide, p2, conn.toSide, 2)[1]; // t = 0.5
+  }
+
   /** Right-click on empty canvas. Nodes stop their right-clicks from reaching here and groups
    *  mark theirs handled (defaultPrevented); a text field (group rename) or the bottom tool bar
    *  keeps the browser's own menu. Paste lands where the canvas was clicked. */

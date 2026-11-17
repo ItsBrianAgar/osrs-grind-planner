@@ -77,7 +77,8 @@ interface ConnGeometry {
          class="connection-group"
          (mouseenter)="hoveredId = conn.id"
          (mouseleave)="hoveredId = null"
-         (click)="removeConnection.emit(conn.id)">
+         (click)="removeConnection.emit(conn.id)"
+         (contextmenu)="onConnectionContextMenu($event, conn.id)">
         <ng-container *ngIf="conn.id !== reconnecting?.connId && connGeometry(conn) as geo">
           <path
             [attr.d]="geo.path"
@@ -293,6 +294,13 @@ export class ConnectionsLayerComponent {
     return sp.connId;
   }
   @Output() removeConnection = new EventEmitter<string>();
+  /** Right-click on a line. Marked handled (preventDefault) so the canvas's own menu stays shut. */
+  @Output() connectionContextMenu = new EventEmitter<{ event: MouseEvent; connId: string }>();
+
+  onConnectionContextMenu(event: MouseEvent, connId: string): void {
+    event.preventDefault();
+    this.connectionContextMenu.emit({ event, connId });
+  }
   @Output() endpointDragStart = new EventEmitter<{ connId: string; end: 'from' | 'to'; event: MouseEvent }>();
 
   private readonly metrics = inject(NodeMetricsService);

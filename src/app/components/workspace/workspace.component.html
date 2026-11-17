@@ -47,6 +47,7 @@
         [reconnecting]="reconnecting()"
         [splicePreview]="splicePreview()"
         (removeConnection)="deleteConnection($event)"
+        (connectionContextMenu)="onConnectionContextMenu($event)"
         (endpointDragStart)="onEndpointDragStart($event)"
       />
 
