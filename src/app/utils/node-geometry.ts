@@ -52,6 +52,16 @@ export function sideFacing(box: Box, size: Size, target: Point): NodeSide {
   return dy > 0 ? 'bottom' : 'top';
 }
 
+/**
+ * Which sides a connection between two boxes should leave and arrive by: right → left when the
+ * target is clear to the right, left → right when clear to the left, otherwise top/bottom.
+ */
+export function facingSides(from: Box, fromSize: Size, to: Box, toSize: Size): { fromSide: NodeSide; toSide: NodeSide } {
+  if (to.x >= from.x + fromSize.width) return { fromSide: 'right', toSide: 'left' };
+  if (to.x + toSize.width <= from.x) return { fromSide: 'left', toSide: 'right' };
+  return to.y >= from.y ? { fromSide: 'bottom', toSide: 'top' } : { fromSide: 'top', toSide: 'bottom' };
+}
+
 /** Control points for a connection curve: each pulls outward along its side's normal, so the curve always leaves/arrives perpendicular to the box edge. An end with no fixed side (the cursor) just trails toward the other point. */
 function bezierControls(p1: Point, side1: NodeSide, p2: Point, side2: NodeSide | null): [Point, Point] {
   const dist = Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y));

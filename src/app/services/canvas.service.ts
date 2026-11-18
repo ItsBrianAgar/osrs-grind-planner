@@ -618,6 +618,14 @@ export class CanvasService {
     this.nodes.update(ns => ns.map(n => n.id === id ? { ...n, ...updates } : n));
   }
 
+  /** Moves many nodes at once (one signal update), e.g. after an auto-organise. */
+  setNodePositions(positions: ReadonlyMap<string, { x: number; y: number }>): void {
+    this.nodes.update(ns => ns.map(n => {
+      const p = positions.get(n.id);
+      return p ? { ...n, x: p.x, y: p.y } : n;
+    }));
+  }
+
   deleteNode(id: string): void {
     this.nodes.update(ns => ns.filter(n => n.id !== id));
     this.connections.update(cs => cs.filter(c =>

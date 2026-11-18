@@ -4,7 +4,8 @@ import { CanvasService } from '../../services/canvas.service';
 import { NodeMetricsService } from '../../services/node-metrics.service';
 import { ToolService } from '../../services/tool.service';
 import { SettingsService } from '../../services/settings.service';
-import { Box, Point, sidePoint, nearestSide, sideFacing, sampleBezier, curveCrossings, bezierPath, distanceToPolyline, OPPOSITE_SIDE, Size } from '../../utils/node-geometry';
+import { Box, Point, sidePoint, nearestSide, sideFacing, sampleBezier, curveCrossings, bezierPath, distanceToPolyline, OPPOSITE_SIDE, Size, facingSides } from '../../utils/node-geometry';
+import { LayoutEdge, LayoutItem, layeredLayout } from '../../utils/auto-layout';
 import { GrindNodeComponent } from '../grind-node/grind-node.component';
 import { ConnectionsLayerComponent, PendingConnection, ReconnectingEnd, SplicePreview } from '../connections-layer/connections-layer.component';
 import { NodeEditorComponent } from '../node-editor/node-editor.component';
@@ -991,9 +992,18 @@ export class WorkspaceComponent {
   onGroupContextMenu(event: MouseEvent, groupId: string): void {
     event.preventDefault();
     const memberIds = this.canvas.nodes().filter(n => n.groupId === groupId).map(n => n.id);
+    // Organise the whole selection when this group is part of a bigger one (e.g. several groups
+    // selected), otherwise just tidy this group's members.
+    const selected = this.canvas.selectedNodeIds();
+    const organiseIds = memberIds.some(id => selected.has(id)) && selected.size > memberIds.length ? [...selected] : memberIds;
 
     this.contextMenuItems = [
       { label: 'Rename', icon: 'pi pi-pencil', command: () => this.startRenameGroup(groupId) },
+      ...(organiseIds.length > 1 ? [{
+        label: 'Auto organise',
+        icon: 'pi pi-sitemap',
+        command: () => this.autoOrganise(organiseIds),
+      }] : []),
       { label: 'Copy', icon: 'pi pi-clipboard', command: () => this.copyNodes(memberIds) },
       {
         label: 'Duplicate',
@@ -1014,6 +1024,88 @@ export class WorkspaceComponent {
     ];
 
     this.ctxMenu.show(event);
+  }
+
+  /**
+   * Neatly lays out the given nodes, left to right along their prereq links, from the selection's
+   * current top-left. A group with any of them in it moves as one block (all its members), with
+   * its members tidied inside it the same way. Links between the moved items are re-aimed to suit
+   * the new positions. One undo step.
+   */
+  autoOrganise(nodeIds: string[]): void {
+    const GAP = { gapX: 80, gapY: 40 };
+    const all = this.canvas.nodes();
+    const picked = new Set(nodeIds);
+    const groupIds = new Set(all.filter(n => picked.has(n.id) && n.groupId).map(n => n.groupId!));
+    const inGame = this.settings.theme() === 'in-game';
+    const header = inGame ? IN_GAME_GROUP_HEADER_HEIGHT : GROUP_HEADER_HEIGHT;
+    const bottom = inGame ? IN_GAME_GROUP_PADDING_BOTTOM : GROUP_PADDING_BOTTOM;
+    const conns = this.canvas.connections();
+
+    // Top-level units: loose nodes, and whole groups. A group's members are laid out first, which
+    // gives each member's offset within the group and the group's new size.
+    const units: LayoutItem[] = [];
+    const memberOffsets = new Map<string, { id: string; dx: number; dy: number }[]>();
+    for (const n of all) {
+      if (picked.has(n.id) && !n.groupId) units.push({ id: n.id, x: n.x, y: n.y, ...this.sizeOf(n.id) });
+    }
+    for (const gid of groupIds) {
+      const members = all.filter(n => n.groupId === gid);
+      const memberSet = new Set(members.map(m => m.id));
+      const inner = layeredLayout(
+        members.map(m => ({ id: m.id, x: m.x, y: m.y, ...this.sizeOf(m.id) })),
+        conns.filter(c => c.fromKind === 'node' && c.toKind === 'node' && memberSet.has(c.fromId) && memberSet.has(c.toId))
+          .map(c => ({ from: c.fromId, to: c.toId })),
+        GAP,
+      );
+      let w = 0, h = 0;
+      for (const m of members) {
+        const p = inner.get(m.id)!, s = this.sizeOf(m.id);
+        w = Math.max(w, p.x + s.width);
+        h = Math.max(h, p.y + s.height);
+      }
+      memberOffsets.set(gid, members.map(m => ({ id: m.id, dx: GROUP_PADDING + inner.get(m.id)!.x, dy: header + inner.get(m.id)!.y })));
+      const bound = this.groupBounds().find(g => g.id === gid)!;
+      units.push({ id: gid, x: bound.x, y: bound.y, width: w + GROUP_PADDING * 2, height: h + header + bottom });
+    }
+    if (!units.length) return;
+
+    // The unit a connection end belongs to, or null if it isn't being moved.
+    const unitOf = (id: string, kind: EndpointKind): string | null => {
+      if (kind === 'group') return groupIds.has(id) ? id : null;
+      const n = this.canvas.getNode(id);
+      if (!n) return null;
+      if (n.groupId) return groupIds.has(n.groupId) ? n.groupId : null;
+      return picked.has(id) ? id : null;
+    };
+    const edges: LayoutEdge[] = [];
+    for (const c of conns) {
+      const from = unitOf(c.fromId, c.fromKind), to = unitOf(c.toId, c.toKind);
+      if (from && to && from !== to) edges.push({ from, to });
+    }
+
+    const origin = { x: Math.min(...units.map(u => u.x)), y: Math.min(...units.map(u => u.y)) };
+    const placed = layeredLayout(units, edges, GAP);
+    const positions = new Map<string, Point>();
+    for (const u of units) {
+      const p = placed.get(u.id)!;
+      const x = origin.x + p.x, y = origin.y + p.y;
+      const members = memberOffsets.get(u.id);
+      if (members) members.forEach(m => positions.set(m.id, { x: x + m.dx, y: y + m.dy }));
+      else positions.set(u.id, { x, y });
+    }
+
+    this.canvas.snapshot();
+    this.canvas.setNodePositions(positions);
+
+    // Re-aim links whose ends both moved, now that the boxes are in their new places.
+    for (const c of conns) {
+      if (!unitOf(c.fromId, c.fromKind) || !unitOf(c.toId, c.toKind)) continue;
+      const from = this.resolveTargetBox(c.fromId, c.fromKind), to = this.resolveTargetBox(c.toId, c.toKind);
+      if (!from || !to) continue;
+      const sides = facingSides(from.box, from.size, to.box, to.size);
+      if (sides.fromSide !== c.fromSide || sides.toSide !== c.toSide) this.canvas.updateConnection(c.id, sides);
+    }
   }
 
   /** Editing is single-node only (title/notes), so it's excluded here — every other
@@ -1054,6 +1146,7 @@ export class WorkspaceComponent {
         icon: 'pi pi-th-large',
         command: () => { this.canvas.snapshot(); ids.forEach(id => this.canvas.ungroupNode(id)); },
       }] : []),
+      { label: 'Auto organise', icon: 'pi pi-sitemap', command: () => this.autoOrganise(ids) },
       { separator: true },
       {
         label: 'Delete',
