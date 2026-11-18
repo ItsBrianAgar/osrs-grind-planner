@@ -104,8 +104,8 @@ export class GrindNodeComponent implements AfterViewInit, OnChanges, OnDestroy {
       top: this.node.y + 'px',
       // Used by the in-game theme as the card's background — see the SCSS. Set here (not in the
       // stylesheet) so the relative path resolves against the page, which keeps it working on
-      // the GitHub Pages subpath.
-      '--panel-image': "url('ui/inventory-tab.png')",
+      // the GitHub Pages subpath. Completed nodes get the green-framed, dark version.
+      '--panel-image': this.node.completed ? "url('ui/inventory-tab-complete.png')" : "url('ui/inventory-tab.png')",
     };
   }
 

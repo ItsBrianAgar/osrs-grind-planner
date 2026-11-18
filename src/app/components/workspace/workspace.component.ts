@@ -1302,6 +1302,12 @@ export class WorkspaceComponent {
     return members.length > 0 && members.every(n => this.canvas.prereqStatus(n.id).locked);
   }
 
+  /** True once every member of a group is completed. */
+  isGroupCompleted(groupId: string): boolean {
+    const members = this.canvas.nodes().filter(n => n.groupId === groupId);
+    return members.length > 0 && members.every(n => n.completed);
+  }
+
   trackNode(_: number, node: { id: string }): string {
     return node.id;
   }

@@ -293,6 +293,14 @@ $text-muted: #9a8860;
     image-rendering: pixelated;
     // The 12px frame is part of the box here, so pull the content back to the same spacing.
     padding: 18px 4px 6px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      background: rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
   }
 
   .pv-group-label {
@@ -323,6 +331,7 @@ $text-muted: #9a8860;
       border-image-source: var(--panel-image);
       border-image-slice: 12 fill;
       image-rendering: pixelated;
+      filter: brightness(0.6);
     }
   }
 
