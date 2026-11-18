@@ -460,16 +460,6 @@
     border-radius: 0;
     image-rendering: pixelated;
 
-    // Dims the image. A layer on top rather than a filter, so the highlight rings keep their full
-    // colour. inset -12px reaches over the frame too.
-    &::after {
-      content: '';
-      position: absolute;
-      inset: -12px;
-      background: rgba(0, 0, 0, 0.25);
-      pointer-events: none;
-    }
-
     // The frame image ignores border-color, so highlights are a solid ring around it instead.
     &.conn-target {
       box-shadow: 0 0 0 2px #80e880;

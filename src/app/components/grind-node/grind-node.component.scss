@@ -301,8 +301,8 @@
 }
 
 // ── In-game theme ─────────────────────────────────────────────────────────────
-// OSRS interface art: the card is drawn from the inventory-tab panel image (darker than the group
-// panels around it), item sprites sit straight on it, and text uses the RuneScape pixel fonts
+// OSRS interface art: the card is drawn from the inventory-tab panel image (green frame, dark
+// fill), item sprites sit straight on it, and text uses the RuneScape pixel fonts
 // with the game's hard 1px black shadow.
 
 :host-context(.theme-in-game) {
@@ -315,7 +315,7 @@
 
     // The image as a 9-slice: the 12px frame and corners at native size with crisp pixels, the
     // middle stretched to fill. Behind the card's content (z-index -1 within the card), out over
-    // the 1.5px border so it reaches the very edge; the filter darkens only this layer.
+    // the 1.5px border so it reaches the very edge.
     &::before {
       content: '';
       position: absolute;
@@ -326,7 +326,6 @@
       border-image-source: var(--panel-image);
       border-image-slice: 12 fill;
       image-rendering: pixelated;
-      filter: brightness(0.6);
       pointer-events: none;
     }
 
