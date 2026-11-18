@@ -77,7 +77,6 @@
     opacity: 0.65;
     border-color: rgba(107, 207, 107, 0.5);
     .node-title {
-      text-decoration: line-through;
       color: #6a6040;
     }
 
@@ -100,7 +99,7 @@
   }
 
   // Gated by an incomplete prereq — dimmed and desaturated so it reads as "not available yet"
-  // without being confused with .completed, which uses opacity + strikethrough for the opposite idea.
+  // without being confused with .completed, which uses opacity + a muted title for the opposite idea.
   &.locked {
     opacity: 0.55;
   }
