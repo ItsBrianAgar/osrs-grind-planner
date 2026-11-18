@@ -163,6 +163,7 @@
   color: #6bcf6b;
   font-size: 14px;
   flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .node-notes {
@@ -341,13 +342,14 @@
       pointer-events: none;
     }
 
-    // Completed cards swap to the green-framed, dark panel (via --panel-image), shown at full
-    // strength: the frame already says "done", so no darkening or fading.
+    // Completed cards swap to the green-framed, dark panel (via --panel-image), shown undarkened
+    // (the frame already says "done"), with the panel slightly see-through.
     &.completed {
       opacity: 1;
 
       &::before {
         filter: none;
+        opacity: 0.85; // a touch see-through
       }
     }
 
