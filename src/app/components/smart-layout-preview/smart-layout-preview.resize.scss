@@ -1,0 +1,77 @@
+@use 'preview-easing' as *;
+
+// Resize (a 5s loop): four cards, centred, in a 2 × 2 grid. The cursor grabs the outline's
+// right handle and drags it out ($drag), the outline stretching with it; the cards reflow ($snap)
+// straight into a single row of four, staying centred. It holds, then drags back in to the 2 × 2
+// grid it started from.
+svg[data-feature='resize'] * { animation-duration: 5s; }
+
+.rs-c0 { animation-name: rs-c0; }
+@keyframes rs-c0 {
+  0%, 31% { transform: none; animation-timing-function: $snap; }
+  36%, 61% { transform: translate(-64px, 18px); animation-timing-function: $snap; }
+  66%, 100% { transform: none; }
+}
+.rs-c1 { animation-name: rs-c1; }
+@keyframes rs-c1 {
+  0%, 31% { transform: none; animation-timing-function: $snap; }
+  36%, 61% { transform: translate(-64px, 18px); animation-timing-function: $snap; }
+  66%, 100% { transform: none; }
+}
+.rs-c2 { animation-name: rs-c2; }
+@keyframes rs-c2 {
+  0%, 31% { transform: none; animation-timing-function: $snap; }
+  36%, 61% { transform: translate(64px, -18px); animation-timing-function: $snap; }
+  66%, 100% { transform: none; }
+}
+.rs-c3 { animation-name: rs-c3; }
+@keyframes rs-c3 {
+  0%, 31% { transform: none; animation-timing-function: $snap; }
+  36%, 61% { transform: translate(64px, -18px); animation-timing-function: $snap; }
+  66%, 100% { transform: none; }
+}
+
+// The outline: its width stretches with the drag (same $drag curve and timing as the cursor, so
+// the handle stays under it), while its height and vertical position change only when the cards
+// snap between 2 × 2 and a single row ($snap; the vertical move is on a wrapping group). The cards
+// only go into the row once the outline is wide enough to hold it (the end of the drag out), and
+// drop back to 2 × 2 as soon as the edge comes in (the row no longer fits).
+.rs-outline { animation-name: rs-outline-w, rs-outline-h; }
+@keyframes rs-outline-w {
+  0%, 8% { transform: none; width: 128px; animation-timing-function: $drag; }
+  31%, 60% { transform: translateX(-64px); width: 256px; animation-timing-function: $drag; }
+  79%, 100% { transform: none; width: 128px; }
+}
+@keyframes rs-outline-h {
+  0%, 31% { height: 72px; animation-timing-function: $snap; }
+  36%, 61% { height: 36px; animation-timing-function: $snap; }
+  66%, 100% { height: 72px; }
+}
+.rs-outline-v { animation-name: rs-outline-v; }
+@keyframes rs-outline-v {
+  0%, 31% { transform: none; animation-timing-function: $snap; }
+  36%, 61% { transform: translateY(18px); animation-timing-function: $snap; }
+  66%, 100% { transform: none; }
+}
+.rs-handle { animation-name: rs-handle; }
+@keyframes rs-handle {
+  0%, 8% { transform: none; animation-timing-function: $drag; }
+  31%, 60% { transform: translate(64px, 0); animation-timing-function: $drag; }
+  79%, 100% { transform: none; }
+}
+
+.rs-cursor { transform-box: view-box; transform-origin: 0 0; animation-name: rs-cursor; }
+@keyframes rs-cursor {
+  0%, 8% { transform: translate(204px, 50px); animation-timing-function: $drag; }
+  31%, 60% { transform: translate(268px, 50px); animation-timing-function: $drag; }
+  79%, 100% { transform: translate(204px, 50px); }
+}
+.rs-cursor-press { transform-origin: 0 0; animation-name: rs-cursor-press; }
+@keyframes rs-cursor-press {
+  0%, 7.2% { transform: none; }
+  8%, 31% { transform: scale(0.85); }
+  31.8%, 59.2% { transform: none; }
+  60%, 79% { transform: scale(0.85); }
+  79.8%, 100% { transform: none; }
+}
+

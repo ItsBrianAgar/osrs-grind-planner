@@ -234,6 +234,195 @@
   z-index: 5;
 }
 
+// ── Auto-organise overlay ───────────────────────────────────────────────────
+// Figma-style: an outline round the arrangement, a bar in each gap (drag to re-space every gap
+// on that axis; all of them light up while dragging), a circle on each item (drag to reorder;
+// an outline marks the slot it'll drop into), and a right-edge handle for the grid's items per
+// row. Same blue as the insert-into-connection preview. Sizes are divided by --z (the zoom) so
+// the handles stay the same size on screen. Only the handles take the mouse.
+
+$organise-blue: #60c0ff;
+
+.organise-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40; // above selected nodes (10), below a dragged one (50)
+  pointer-events: none;
+}
+
+.organise-box {
+  position: absolute;
+  border: calc(1.5px / var(--z)) solid #c8a34a;
+  pointer-events: none;
+}
+
+.organise-count {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-top: calc(8px / var(--z));
+  transform: translateX(-50%) scale(calc(1 / var(--z)));
+  transform-origin: top center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #c8a34a;
+  color: #100e08;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+// The box's edges (invisible grab strips) and handles (corners + edge middles): drag to change
+// the grid's items per row (left/right) or rows (top/bottom). The opposite side stays put.
+.organise-resize {
+  position: absolute;
+  pointer-events: auto;
+
+  &--left, &--right { top: 0; bottom: 0; width: calc(10px / var(--z)); cursor: ew-resize; }
+  &--top, &--bottom { left: 0; right: 0; height: calc(10px / var(--z)); cursor: ns-resize; }
+  &--right { right: calc(-5px / var(--z)); }
+  &--left { left: calc(-5px / var(--z)); }
+  &--top { top: calc(-5px / var(--z)); }
+  &--bottom { bottom: calc(-5px / var(--z)); }
+}
+
+// Figma-style handle: a small white square with a thin gold border, centred on the outline.
+.organise-handle {
+  position: absolute;
+  width: calc(7px / var(--z));
+  height: calc(7px / var(--z));
+  transform: translate(-50%, -50%);
+  border: calc(1px / var(--z)) solid #c8a34a;
+  border-radius: calc(1.5px / var(--z));
+  background: #fff;
+  box-shadow: 0 0 calc(2px / var(--z)) rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  z-index: 1;
+  transition: transform 0.1s;
+
+  &:hover { transform: translate(-50%, -50%) scale(1.3); }
+
+  // Positions are relative to the outline's padding box; nudge onto the 1.5px border's centre.
+  $edge: calc(-0.75px / var(--z));
+  &--tl, &--l, &--bl { left: $edge; }
+  &--tr, &--r, &--br { left: calc(100% - $edge); }
+  &--t, &--b { left: 50%; }
+  &--tl, &--t, &--tr { top: $edge; }
+  &--bl, &--b, &--br { top: calc(100% - $edge); }
+  &--l, &--r { top: 50%; }
+
+  &--tl, &--bl, &--tr, &--br, &--l, &--r { cursor: ew-resize; }
+  &--t, &--b { cursor: ns-resize; }
+}
+
+// Ghost of the box while its edge is dragged, out to the cursor.
+.organise-resize-ghost {
+  position: absolute;
+  border: calc(1.5px / var(--z)) dashed rgba(200, 163, 74, 0.8);
+  background: rgba(200, 163, 74, 0.06);
+  pointer-events: none;
+}
+
+.organise-resize-label {
+  position: absolute;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #c8a34a;
+  color: #100e08;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--right { top: 50%; left: 100%; margin-left: calc(10px / var(--z)); transform: translateY(-50%) scale(calc(1 / var(--z))); transform-origin: left center; }
+  &--left { top: 50%; right: 100%; margin-right: calc(10px / var(--z)); transform: translateY(-50%) scale(calc(1 / var(--z))); transform-origin: right center; }
+  &--bottom { left: 50%; top: 100%; margin-top: calc(10px / var(--z)); transform: translateX(-50%) scale(calc(1 / var(--z))); transform-origin: top center; }
+  &--top { left: 50%; bottom: 100%; margin-bottom: calc(10px / var(--z)); transform: translateX(-50%) scale(calc(1 / var(--z))); transform-origin: bottom center; }
+}
+
+.organise-gap {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+// While dragging, every gap on that axis is highlighted to show the spacing changing together.
+.dragging-gap-x .organise-gap--x,
+.dragging-gap-y .organise-gap--y {
+  background: rgba(96, 192, 255, 0.18);
+}
+
+.organise-gap-handle {
+  flex-shrink: 0;
+  pointer-events: auto;
+  // Generous hit area round a thin bar.
+  padding: calc(6px / var(--z));
+
+  &::before {
+    content: '';
+    display: block;
+    border-radius: calc(1px / var(--z));
+    background: $organise-blue;
+    opacity: 0.8;
+  }
+
+  .organise-gap--x & {
+    cursor: ew-resize;
+    &::before { width: calc(2px / var(--z)); height: calc(16px / var(--z)); }
+  }
+
+  .organise-gap--y & {
+    cursor: ns-resize;
+    &::before { width: calc(16px / var(--z)); height: calc(2px / var(--z)); }
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+.organise-gap-label {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px / var(--z))) scale(calc(1 / var(--z)));
+  transform-origin: bottom center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #0f2233;
+  border: 1px solid $organise-blue;
+  color: #d6eeff;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.organise-reorder {
+  position: absolute;
+  width: calc(12px / var(--z));
+  height: calc(12px / var(--z));
+  margin: calc(-6px / var(--z)) 0 0 calc(-6px / var(--z));
+  border: calc(1.5px / var(--z)) solid $organise-blue;
+  border-radius: 50%;
+  background: #0f2233;
+  cursor: grab;
+  pointer-events: auto;
+  transition: transform 0.1s, background 0.1s;
+
+  &:hover {
+    transform: scale(1.3);
+    background: $organise-blue;
+  }
+}
+
+// Where the item being reordered will land.
+.organise-slot {
+  position: absolute;
+  border: calc(1.5px / var(--z)) solid $organise-blue;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 // ── Bottom tool command bar ─────────────────────────────────────────────────
 
 .tool-dock {

@@ -1,5 +1,6 @@
 import { Component, ElementRef, inject, Input, Output, EventEmitter, ViewChild, computed, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { SmartLayoutPreviewComponent } from '../smart-layout-preview/smart-layout-preview.component';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { spriteUrl } from '../../../plugins/osrs-item-kit/spriteUrl';
 import { AutofocusSelectDirective } from '../../directives/autofocus-select.directive';
 import { MessageService } from 'primeng/api';
-import { SettingsService, Theme } from '../../services/settings.service';
+import { SettingsService, Theme, SmartLayoutFeature } from '../../services/settings.service';
 import { CanvasService } from '../../services/canvas.service';
 
 /** "Ironman: Quest cape!" → "ironman-quest-cape", for download file names. */
@@ -20,7 +21,7 @@ function slugify(name: string): string {
 @Component({
   selector: 'app-settings-dialog',
   standalone: true,
-  imports: [NgFor, NgIf, FormsModule, DialogModule, ButtonModule, ToggleSwitchModule, MultiSelectModule, InputTextModule, AutofocusSelectDirective],
+  imports: [NgFor, NgIf, SmartLayoutPreviewComponent, FormsModule, DialogModule, ButtonModule, ToggleSwitchModule, MultiSelectModule, InputTextModule, AutofocusSelectDirective],
   templateUrl: './settings-dialog.component.html',
   styleUrl: './settings-dialog.component.scss',
 })
@@ -36,6 +37,7 @@ export class SettingsDialogComponent {
   readonly tabs = [
     { id: 'general', label: 'General', icon: 'pi-cog' },
     { id: 'appearance', label: 'Appearance', icon: 'pi-palette' },
+    { id: 'smart-layout', label: 'Smart layout', icon: 'pi-sitemap' },
     { id: 'danger', label: 'Danger zone', icon: 'pi-exclamation-triangle' },
   ] as const;
   readonly activeTab = signal<(typeof this.tabs)[number]['id']>('general');
@@ -127,6 +129,24 @@ export class SettingsDialogComponent {
 
   togglePrereqs(event: ToggleSwitchChangeEvent): void {
     this.settings.setPrereqsEnabled(event.checked);
+  }
+
+  readonly smartLayoutFeatures: { id: SmartLayoutFeature; name: string; desc: string }[] = [
+    { id: 'autoOrganise', name: 'Auto organise', desc: 'Right-click a selection (or a group) and choose Auto organise to lay it out neatly along its prerequisites, left to right.' },
+    { id: 'spacing', name: 'Spacing handles', desc: 'Drag the bars between organised items to change the spacing of every gap at once. Hold Shift to snap to 10s.' },
+    { id: 'reorder', name: 'Reorder', desc: 'Drag an organised item\'s circle to move it into another slot in the same column or grid.' },
+    { id: 'resize', name: 'Resize rows & columns', desc: 'Drag the organised outline\'s edges or handles to change how many items sit in each row.' },
+    { id: 'detect', name: 'Recognise tidy selections', desc: 'Selecting nodes that are already evenly arranged (for example, organised earlier) brings the handles back.' },
+  ];
+
+  toggleSmartLayoutOn(event: ToggleSwitchChangeEvent): void {
+    this.settings.setSmartLayoutOn(event.checked);
+  }
+
+  /** Turns a smart-layout feature on/off (its whole card is the switch). */
+  flipSmartLayout(feature: SmartLayoutFeature): void {
+    if (!this.settings.smartLayoutOn()) return;
+    this.settings.setSmartLayout(feature, !this.settings.smartLayout()[feature]);
   }
 
   toggleSpliceOnDrop(event: ToggleSwitchChangeEvent): void {

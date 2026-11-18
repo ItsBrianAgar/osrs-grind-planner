@@ -349,7 +349,12 @@
 
       &::before {
         filter: none;
-        opacity: 0.85; // a touch see-through
+        opacity: 0.55; // partly see-through
+      }
+
+      // The green state ring fades to match at rest; hover/selected keep it at full strength.
+      &:not(:hover):not(.selected)::after {
+        opacity: 0.4;
       }
     }
 

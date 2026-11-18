@@ -12,75 +12,163 @@ export interface LayoutEdge {
 }
 
 export interface LayoutOptions {
-  /** Horizontal space between columns. */
+  /** Horizontal space between columns (and between cells of the unlinked grid). */
   gapX: number;
-  /** Vertical space between items in a column (and between rows of unconnected items). */
+  /** Vertical space between items in a column (and between rows of the unlinked grid). */
   gapY: number;
 }
 
 /**
- * Lays items out left-to-right along their prereq links: items with no prereqs (within the set) in
- * the first column, items that depend on them in the next, and so on. Each column is centred
- * vertically against the tallest. Items with no links to the others are packed in a grid below.
- * Returns each item's new top-left, relative to (0, 0) as the top-left of the whole layout.
+ * Which item goes where, without positions: linked items in columns (left to right, each
+ * top to bottom), and the unlinked ones in reading order for the grid below. Kept separate from
+ * the positions so the same arrangement can be re-spaced or reordered.
  */
-export function layeredLayout(items: LayoutItem[], edges: LayoutEdge[], opts: LayoutOptions): Map<string, Point> {
-  const byId = new Map(items.map(i => [i.id, i]));
+export interface LayoutPlan {
+  columns: string[][];
+  loose: string[];
+  /** Items per row in the unlinked grid; defaults to a roughly square grid. */
+  perRow?: number;
+}
+
+/** The space between two neighbours: `x` gaps sit between columns/cells, `y` gaps between stacked items/rows. */
+export interface GapRect extends Point, Size {
+  axis: 'x' | 'y';
+}
+
+export interface Placement {
+  /** Each item's top-left, relative to (0, 0) as the top-left of the whole layout. */
+  positions: Map<string, Point>;
+  gaps: GapRect[];
+  width: number;
+  height: number;
+  /** The unlinked grid, if there is one: where it starts, its cell width and how many items per row. */
+  grid: { x: number; y: number; cellWidth: number; cellHeight: number; perRow: number; count: number } | null;
+}
+
+/**
+ * Plans a left-to-right layout along the items' prereq links: items with no prereqs (within the
+ * set) in the first column, items that depend on them in the next, and so on — each after the
+ * longest chain leading to it. Columns are ordered to limit crossings. Items with no links to the
+ * others are left for a grid below.
+ */
+export function planLayout(items: LayoutItem[], edges: LayoutEdge[]): LayoutPlan {
+  const ids = new Set(items.map(i => i.id));
   const readingOrder = (a: LayoutItem, b: LayoutItem) => a.y - b.y || a.x - b.x;
 
   // Only links between two different items in the set, once each.
   const seen = new Set<string>();
   const links = edges.filter(e => {
     const key = `${e.from}\u0000${e.to}`;
-    if (e.from === e.to || !byId.has(e.from) || !byId.has(e.to) || seen.has(key)) return false;
+    if (e.from === e.to || !ids.has(e.from) || !ids.has(e.to) || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
   const linked = new Set(links.flatMap(e => [e.from, e.to]));
-  const connected = items.filter(i => linked.has(i.id)).sort(readingOrder);
-  const loose = items.filter(i => !linked.has(i.id)).sort(readingOrder);
+  const connected = items.filter(i => linked.has(i.id)).sort(readingOrder).map(i => i.id);
+  const loose = items.filter(i => !linked.has(i.id)).sort(readingOrder).map(i => i.id);
+  if (!connected.length) return { columns: [], loose };
 
-  const out = new Map<string, Point>();
+  const dag = breakCycles(connected, links);
+  const columns = assignColumns(connected, dag);
+  orderColumns(columns, dag);
+  return { columns, loose };
+}
+
+/**
+ * Positions a plan: columns side by side, each stacked and centred vertically against the
+ * tallest; the unlinked items in a roughly square grid below. Also reports the gaps between
+ * neighbours (for spacing handles).
+ */
+export function placeLayout(plan: LayoutPlan, sizes: ReadonlyMap<string, Size>, opts: LayoutOptions): Placement {
+  const positions = new Map<string, Point>();
+  const gaps: GapRect[] = [];
+  const size = (id: string) => sizes.get(id)!;
+  let width = 0;
   let blockHeight = 0;
 
-  if (connected.length) {
-    const dag = breakCycles(connected, links);
-    const columns = assignColumns(connected, dag);
-    orderColumns(columns, dag);
-
-    const heightOf = (col: LayoutItem[]) => col.reduce((h, i) => h + i.height, 0) + opts.gapY * (col.length - 1);
-    blockHeight = Math.max(...columns.map(heightOf));
+  if (plan.columns.length) {
+    const heightOf = (col: string[]) => col.reduce((h, id) => h + size(id).height, 0) + opts.gapY * (col.length - 1);
+    blockHeight = Math.max(...plan.columns.map(heightOf));
 
     let x = 0;
-    for (const col of columns) {
+    plan.columns.forEach((col, c) => {
+      const colW = Math.max(...col.map(id => size(id).width));
       let y = (blockHeight - heightOf(col)) / 2;
-      for (const item of col) {
-        out.set(item.id, { x, y });
-        y += item.height + opts.gapY;
-      }
-      x += Math.max(...col.map(i => i.width)) + opts.gapX;
-    }
+      col.forEach((id, r) => {
+        positions.set(id, { x, y });
+        y += size(id).height;
+        if (r < col.length - 1) gaps.push({ axis: 'y', x, y, width: colW, height: opts.gapY });
+        y += opts.gapY;
+      });
+      if (c < plan.columns.length - 1) gaps.push({ axis: 'x', x: x + colW, y: 0, width: opts.gapX, height: blockHeight });
+      x += colW + opts.gapX;
+    });
+    width = x - opts.gapX;
   }
 
-  if (loose.length) {
-    const perRow = Math.max(1, Math.ceil(Math.sqrt(loose.length)));
-    const cellW = Math.max(...loose.map(i => i.width)) + opts.gapX;
-    const top = connected.length ? blockHeight + opts.gapY * 2 : 0;
+  let height = blockHeight;
+  let grid: Placement['grid'] = null;
+  if (plan.loose.length) {
+    const perRow = Math.min(plan.loose.length, Math.max(1, plan.perRow ?? Math.ceil(Math.sqrt(plan.loose.length))));
+    const cellW = Math.max(...plan.loose.map(id => size(id).width));
+    const gridW = Math.min(perRow, plan.loose.length) * (cellW + opts.gapX) - opts.gapX;
     // Rows take the height of their tallest item, so mixed sizes don't overlap.
-    let y = top;
-    for (let r = 0; r * perRow < loose.length; r++) {
-      const row = loose.slice(r * perRow, (r + 1) * perRow);
-      row.forEach((item, c) => out.set(item.id, { x: c * cellW, y }));
-      y += Math.max(...row.map(i => i.height)) + opts.gapY;
+    let y = plan.columns.length ? blockHeight + opts.gapY * 2 : 0;
+    grid = { x: 0, y, cellWidth: cellW, cellHeight: Math.max(...plan.loose.map(id => size(id).height)), perRow, count: plan.loose.length };
+    for (let r = 0; r * perRow < plan.loose.length; r++) {
+      const row = plan.loose.slice(r * perRow, (r + 1) * perRow);
+      const rowH = Math.max(...row.map(id => size(id).height));
+      row.forEach((id, c) => {
+        const x = c * (cellW + opts.gapX);
+        positions.set(id, { x, y });
+        if (c < row.length - 1) gaps.push({ axis: 'x', x: x + cellW, y, width: opts.gapX, height: rowH });
+      });
+      y += rowH;
+      if ((r + 1) * perRow < plan.loose.length) gaps.push({ axis: 'y', x: 0, y, width: gridW, height: opts.gapY });
+      y += opts.gapY;
     }
+    height = y - opts.gapY;
+    width = Math.max(width, gridW);
   }
 
-  return out;
+  return { positions, gaps, width, height, grid };
+}
+
+/** Plans and places in one go; returns each item's new top-left relative to the layout's top-left. */
+export function layeredLayout(items: LayoutItem[], edges: LayoutEdge[], opts: LayoutOptions): Map<string, Point> {
+  return placeLayout(planLayout(items, edges), new Map(items.map(i => [i.id, i])), opts).positions;
+}
+
+/** Whether two items share a column, or are both in the unlinked grid — the places a reorder may swap between. */
+export function canSwap(plan: LayoutPlan, a: string, b: string): boolean {
+  if (a === b) return false;
+  if (plan.loose.includes(a)) return plan.loose.includes(b);
+  return plan.columns.some(col => col.includes(a) && col.includes(b));
+}
+
+/**
+ * How many cells (cell size + gap per step) fit wholly inside a dragged edge at `length`, clamped
+ * to 1..max: a cell drops out as soon as the edge touches it, and comes back once the edge clears
+ * it. Depends only on where the edge is (not the current count), so it can't flip-flop.
+ */
+export function cellsInLength(length: number, cell: number, gap: number, max: number): number {
+  return Math.min(max, Math.max(1, Math.floor((length + gap) / (cell + gap) + 1e-6)));
+}
+
+/** How many grid items per row fit inside a grid edge dragged to `right` (relative to the grid's left). */
+export function perRowForWidth(grid: NonNullable<Placement['grid']>, right: number, gapX: number): number {
+  return cellsInLength(right, grid.cellWidth, gapX, grid.count);
+}
+
+/** A copy of the plan with two items' places swapped. */
+export function swapInPlan(plan: LayoutPlan, a: string, b: string): LayoutPlan {
+  const swap = (id: string) => (id === a ? b : id === b ? a : id);
+  return { ...plan, columns: plan.columns.map(col => col.map(swap)), loose: plan.loose.map(swap) };
 }
 
 /** Drops the links that close a loop (found by a depth-first walk in reading order), leaving a DAG. */
-function breakCycles(items: LayoutItem[], links: LayoutEdge[]): LayoutEdge[] {
+function breakCycles(ids: string[], links: LayoutEdge[]): LayoutEdge[] {
   const out = new Map<string, LayoutEdge[]>();
   for (const e of links) out.set(e.from, [...(out.get(e.from) ?? []), e]);
 
@@ -96,17 +184,17 @@ function breakCycles(items: LayoutItem[], links: LayoutEdge[]): LayoutEdge[] {
     }
     state.set(id, 'done');
   };
-  for (const i of items) if (!state.has(i.id)) visit(i.id);
+  for (const id of ids) if (!state.has(id)) visit(id);
   return kept;
 }
 
 /** Each item's column is the length of the longest prereq chain leading to it. */
-function assignColumns(items: LayoutItem[], dag: LayoutEdge[]): LayoutItem[][] {
-  const indegree = new Map(items.map(i => [i.id, 0]));
+function assignColumns(ids: string[], dag: LayoutEdge[]): string[][] {
+  const indegree = new Map(ids.map(id => [id, 0]));
   for (const e of dag) indegree.set(e.to, indegree.get(e.to)! + 1);
 
-  const col = new Map(items.map(i => [i.id, 0]));
-  const queue = items.filter(i => indegree.get(i.id) === 0).map(i => i.id);
+  const col = new Map(ids.map(id => [id, 0]));
+  const queue = ids.filter(id => indegree.get(id) === 0);
   while (queue.length) {
     const id = queue.shift()!;
     for (const e of dag) {
@@ -117,26 +205,26 @@ function assignColumns(items: LayoutItem[], dag: LayoutEdge[]): LayoutItem[][] {
     }
   }
 
-  const columns: LayoutItem[][] = [];
-  for (const i of items) (columns[col.get(i.id)!] ??= []).push(i); // items arrive in reading order
+  const columns: string[][] = [];
+  for (const id of ids) (columns[col.get(id)!] ??= []).push(id); // ids arrive in reading order
   return columns.filter(Boolean);
 }
 
 /** Reorders each column so items sit near the average position of what they link to (fewer crossings). */
-function orderColumns(columns: LayoutItem[][], dag: LayoutEdge[]): void {
+function orderColumns(columns: string[][], dag: LayoutEdge[]): void {
   const neighbours = (id: string, dir: 'prev' | 'next') =>
     dir === 'prev' ? dag.filter(e => e.to === id).map(e => e.from) : dag.filter(e => e.from === id).map(e => e.to);
 
-  const sortBy = (col: LayoutItem[], dir: 'prev' | 'next', index: Map<string, number>) => {
+  const sortBy = (col: string[], dir: 'prev' | 'next', index: Map<string, number>) => {
     const score = new Map<string, number>();
-    col.forEach((item, i) => {
-      const ns = neighbours(item.id, dir).filter(n => index.has(n));
-      score.set(item.id, ns.length ? ns.reduce((s, n) => s + index.get(n)!, 0) / ns.length : i);
+    col.forEach((id, i) => {
+      const ns = neighbours(id, dir).filter(n => index.has(n));
+      score.set(id, ns.length ? ns.reduce((s, n) => s + index.get(n)!, 0) / ns.length : i);
     });
-    col.sort((a, b) => score.get(a.id)! - score.get(b.id)!); // stable, so ties keep their order
+    col.sort((a, b) => score.get(a)! - score.get(b)!); // stable, so ties keep their order
   };
 
-  const indexOf = (col: LayoutItem[]) => new Map(col.map((item, i) => [item.id, i]));
+  const indexOf = (col: string[]) => new Map(col.map((id, i) => [id, i]));
   for (let pass = 0; pass < 4; pass++) {
     for (let c = 1; c < columns.length; c++) sortBy(columns[c], 'prev', indexOf(columns[c - 1]));
     for (let c = columns.length - 2; c >= 0; c--) sortBy(columns[c], 'next', indexOf(columns[c + 1]));

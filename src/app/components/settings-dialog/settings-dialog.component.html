@@ -133,6 +133,43 @@
           </section>
         </ng-container>
 
+        <!-- ── Smart layout ── -->
+        <ng-container *ngIf="activeTab() === 'smart-layout'">
+          <section class="group">
+            <h2 class="group-title">Smart layout</h2>
+            <div class="row smart-master">
+              <div class="row-info">
+                <div class="row-name">Use smart layout</div>
+                <div class="row-desc">Turn every smart layout feature on or off at once. Each feature below keeps its own setting for when this is on.</div>
+              </div>
+              <p-toggleswitch [ngModel]="settings.smartLayoutOn()" (onChange)="toggleSmartLayoutOn($event)" />
+            </div>
+            <!-- The whole card is the switch (click, or Space/Enter when focused); the toggle just shows it. -->
+            <div
+              class="row feature-row"
+              *ngFor="let f of smartLayoutFeatures"
+              role="switch"
+              [attr.tabindex]="settings.smartLayoutOn() ? 0 : -1"
+              [attr.aria-disabled]="!settings.smartLayoutOn()"
+              [class.disabled]="!settings.smartLayoutOn()"
+              [attr.aria-checked]="settings.smartLayout()[f.id]"
+              [attr.aria-label]="f.name"
+              [class.on]="settings.smartLayout()[f.id]"
+              (click)="flipSmartLayout(f.id)"
+              (keydown.space)="$event.preventDefault(); flipSmartLayout(f.id)"
+              (keydown.enter)="$event.preventDefault(); flipSmartLayout(f.id)"
+            >
+              <!-- A small looping illustration of the feature (a still frame with reduced motion). -->
+              <app-smart-layout-preview class="feature-preview" [feature]="f.id" />
+              <div class="row-info">
+                <div class="row-name">{{ f.name }}</div>
+                <div class="row-desc">{{ f.desc }}</div>
+              </div>
+              <p-toggleswitch class="feature-toggle" [ngModel]="settings.smartLayout()[f.id]" [tabindex]="-1" aria-hidden="true" />
+            </div>
+          </section>
+        </ng-container>
+
         <!-- ── Danger zone ── -->
         <ng-container *ngIf="activeTab() === 'danger'">
           <section class="group">

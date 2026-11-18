@@ -1,0 +1,258 @@
+@use 'preview-easing' as *;
+
+// Small looping illustrations of each smart-layout feature, in the canvas's colours. Each
+// element's resting state is the feature's "after" frame, which is what shows with reduced motion.
+// The host's size is set by whoever places it.
+
+:host {
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #100e08;
+  border: 1px solid #2a2417;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  * {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-duration: 4s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+.fp-card { fill: #1e1a10; stroke: #5a4a28; stroke-width: 1; }
+.fp-card--lifted { stroke: #c8a34a; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
+.fp-gap { fill: rgba(96, 192, 255, 0.18); }
+.fp-bar { fill: #60c0ff; }
+.fp-dot { fill: #0f2233; stroke: #60c0ff; stroke-width: 1; }
+.fp-slot { fill: none; stroke: #60c0ff; stroke-width: 1; }
+.fp-outline { fill: none; stroke: #c8a34a; stroke-width: 1; }
+.fp-handle { fill: #fff; stroke: #c8a34a; stroke-width: 0.8; }
+.fp-marquee { fill: rgba(200, 163, 74, 0.1); stroke: #c8a34a; stroke-width: 0.8; stroke-dasharray: 3 2; }
+
+// Auto organise (an 8.6s demo, as one continuous story that loops cleanly):
+//   0–0.6s   resting on the top-left scattered card
+//   –1.0s    moves a little up and left
+//   –1.5s    drags a selection box over all three ($drag)
+//   –1.9s    holds it briefly, then lets go
+//   –2.7s    over to the middle; right-clicks; a one-item menu opens
+//   –3.4s    onto Auto organise; clicks; the menu closes
+//   –4.0s    the cards snap into a row ($snap), still selected
+//   –6.2s    holds; the selection clears
+//   –8.0s    quickly drags each card back out ($drag; card and cursor share it): right, middle,
+//            then the top-left one last, ending where it began (then rests, as at the start)
+// Resting states are the tidy "after" frame (what reduced motion shows; cursor/menu/box hidden).
+$selected: #f0c040;
+$unselected: #5a4a28;
+
+svg[data-feature='autoOrganise'] * { animation-duration: 8.6s; }
+
+.ao-a { animation-name: ao-a; }
+.ao-b { animation-name: ao-b; }
+.ao-c { animation-name: ao-c; }
+// Each card: scattered and selected by the box, eased into the row, held, then dragged back out
+// between $from and $to (in step with the cursor).
+@mixin ao-card($name, $messy, $from, $to) {
+  @keyframes #{$name} {
+    0%, 17.1% { transform: $messy; stroke: $unselected; }
+    17.3% { transform: $messy; stroke: $selected; }
+    39.6% { transform: $messy; stroke: $selected; animation-timing-function: $snap; }
+    46.5%, 71.9% { transform: none; stroke: $selected; }
+    72.1% { transform: none; stroke: $unselected; }
+    #{$from} { transform: none; stroke: $unselected; animation-timing-function: $drag; }
+    #{$to}, 100% { transform: $messy; stroke: $unselected; }
+  }
+}
+@include ao-card(ao-c, translate(-36px, -14px) rotate(8deg), 75%, 79.1%);
+@include ao-card(ao-b, translate(-14px, 18px) rotate(5deg), 82%, 86%);
+@include ao-card(ao-a, translate(18px, -20px) rotate(-6deg), 89.1%, 93%);
+
+// The selection box: its corner rides the cursor (same keyframes and $drag curve, sizing the
+// rect itself), held a moment, gone on release.
+.ao-marquee { opacity: 0; width: 0; height: 0; animation-name: ao-marquee; }
+@keyframes ao-marquee {
+  0%, 11.6% { opacity: 0; width: 0; height: 0; }
+  11.7% { opacity: 1; width: 0; height: 0; animation-timing-function: $drag; }
+  17.3%, 22% { opacity: 1; width: 224px; height: 84px; }
+  22.3%, 100% { opacity: 0; width: 224px; height: 84px; }
+}
+
+.fp-menu { fill: #1a1610; stroke: #3a3020; stroke-width: 1; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.fp-menu-hover { fill: rgba(200, 163, 74, 0.2); }
+.fp-menu-item { fill: #c8b890; font-size: 8px; font-family: inherit; }
+.fp-menu-item--accent { fill: #e8d5a3; font-weight: 600; }
+.ao-menu { opacity: 0; animation-name: ao-menu; }
+@keyframes ao-menu { 0%, 31.2% { opacity: 0; } 31.3%, 39.4% { opacity: 1; } 39.6%, 100% { opacity: 0; } }
+.ao-menu-hover { opacity: 0; animation-name: ao-menu-hover; }
+@keyframes ao-menu-hover { 0%, 36.8% { opacity: 0; } 37.1%, 39.4% { opacity: 1; } 39.6%, 100% { opacity: 0; } }
+
+.fp-cursor { fill: #fff; stroke: #000; stroke-width: 1; stroke-linejoin: round; }
+.ao-cursor { transform-box: view-box; transform-origin: 0 0; animation-name: ao-cursor; }
+@keyframes ao-cursor {
+  0% { transform: translate(73px, 30px); }
+  7% { transform: translate(73px, 30px); animation-timing-function: $settle; }
+  11.7% { transform: translate(24px, 8px); animation-timing-function: $drag; }
+  17.3% { transform: translate(248px, 92px); }
+  22% { transform: translate(248px, 92px); animation-timing-function: $settle; }
+  29.1% { transform: translate(140px, 46px); }
+  31.3% { transform: translate(140px, 46px); animation-timing-function: $settle; }
+  37.3% { transform: translate(172px, 60px); }
+  72.1% { transform: translate(172px, 60px); animation-timing-function: $settle; }
+  75% { transform: translate(235px, 50px); animation-timing-function: $drag; }
+  79.1% { transform: translate(199px, 36px); animation-timing-function: $settle; }
+  82% { transform: translate(145px, 50px); animation-timing-function: $drag; }
+  86% { transform: translate(131px, 68px); animation-timing-function: $settle; }
+  89.1% { transform: translate(55px, 50px); animation-timing-function: $drag; }
+  93%, 100% { transform: translate(73px, 30px); }
+}
+// Mouse button down: through the box drag and its hold, the right-click, the menu click, and
+// each card drag.
+.ao-cursor-press { transform-origin: 0 0; animation-name: ao-cursor-press; }
+@keyframes ao-cursor-press {
+  0%, 11.4% { transform: none; }
+  11.7%, 22% { transform: scale(0.85); }
+  22.4%, 29.8% { transform: none; }
+  30.3% { transform: scale(0.85); }
+  30.5%, 38.1% { transform: none; }
+  38.3% { transform: scale(0.85); }
+  38.7%, 74.9% { transform: none; }
+  75%, 79.1% { transform: scale(0.85); }
+  79.4%, 81.7% { transform: none; }
+  82%, 86% { transform: scale(0.85); }
+  86.3%, 88.7% { transform: none; }
+  89.1%, 93% { transform: scale(0.85); }
+  93.4%, 100% { transform: none; }
+}
+
+// Spacing: both gaps ease open together, hold, then ease closed (the same timing and curve).
+.sp-left { animation-name: sp-left; }
+.sp-right { animation-name: sp-right; }
+.sp-gap { animation-name: sp-gap; }
+.sp-bar-left { animation-name: sp-bar-left; }
+.sp-bar-right { animation-name: sp-bar-right; }
+@keyframes sp-left { 0% { transform: none; } 15% { transform: none; animation-timing-function: $settle; } 50% { transform: translateX(-14px); } 65% { transform: translateX(-14px); animation-timing-function: $settle; } 100% { transform: none; } }
+@keyframes sp-right { 0% { transform: none; } 15% { transform: none; animation-timing-function: $settle; } 50% { transform: translateX(14px); } 65% { transform: translateX(14px); animation-timing-function: $settle; } 100% { transform: none; } }
+@keyframes sp-gap { 0% { transform: none; } 15% { transform: none; animation-timing-function: $settle; } 50% { transform: scaleX(3.3); } 65% { transform: scaleX(3.3); animation-timing-function: $settle; } 100% { transform: none; } }
+@keyframes sp-bar-left { 0% { transform: none; } 15% { transform: none; animation-timing-function: $settle; } 50% { transform: translateX(-7px); } 65% { transform: translateX(-7px); animation-timing-function: $settle; } 100% { transform: none; } }
+@keyframes sp-bar-right { 0% { transform: none; } 15% { transform: none; animation-timing-function: $settle; } 50% { transform: translateX(7px); } 65% { transform: translateX(7px); animation-timing-function: $settle; } 100% { transform: none; } }
+
+// Reorder (5s), mirroring the canvas: the cursor grabs the first card's circle (all circles hide);
+// the card follows the cursor, keeping its grab point, with the blue slot box where it came from.
+// As the cursor enters the next card, that card jumps back into the old slot and the slot box
+// jumps to the freed one (instant, as on the canvas); on release the card drops into the slot and
+// the circles return. After a hold it's dragged back up the same way, ending where it began.
+svg[data-feature='reorder'] * { animation-duration: 5s; }
+
+.ro-cursor { transform-box: view-box; transform-origin: 0 0; animation-name: ro-cursor; }
+@keyframes ro-cursor {
+  0%, 10% { transform: translate(44px, 50px); animation-timing-function: $drag; }
+  26% { transform: translate(116px, 56px); }
+  52% { transform: translate(116px, 56px); animation-timing-function: $settle; }
+  58% { transform: translate(108px, 50px); animation-timing-function: $drag; }
+  74% { transform: translate(36px, 44px); animation-timing-function: $settle; }
+  82%, 100% { transform: translate(44px, 50px); }
+}
+.ro-cursor-press { transform-origin: 0 0; animation-name: ro-cursor-press; }
+@keyframes ro-cursor-press {
+  0%, 9.6% { transform: none; }
+  10%, 26% { transform: scale(0.85); }
+  26.4%, 57.6% { transform: none; }
+  58%, 74% { transform: scale(0.85); }
+  74.4%, 100% { transform: none; }
+}
+
+// The dragged card: follows the cursor while held (same keyframes and curve), jumps into its slot
+// on release, and is lifted (shadow, brighter green edge) while dragged.
+.ro-a { animation-name: ro-a; }
+@keyframes ro-a {
+  0%, 10% { transform: none; animation-timing-function: $drag; }
+  26% { transform: translate(72px, 6px); }
+  26.4%, 58% { transform: translate(64px, 0); animation-timing-function: $drag; }
+  74% { transform: translate(-8px, -6px); }
+  74.4%, 100% { transform: none; }
+}
+.ro-a-card { stroke: rgba(107, 207, 107, 0.5); animation-name: ro-a-card; }
+@keyframes ro-a-card {
+  0%, 9.6%, 26.4%, 57.6%, 74.4%, 100% { stroke: rgba(107, 207, 107, 0.5); filter: none; }
+  10%, 26%, 58%, 74% { stroke: rgba(107, 207, 107, 0.9); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.7)); }
+}
+
+// The next card: jumps back when the cursor enters it, and returns on the way back.
+.ro-b { animation-name: ro-b; }
+@keyframes ro-b {
+  0%, 18.4% { transform: none; }
+  18.8%, 66.6% { transform: translateX(-64px); }
+  67%, 100% { transform: none; }
+}
+
+// The slot box: shown while dragging, at the dragged card's slot (jumping as the cards swap).
+.ro-slot { opacity: 0; animation-name: ro-slot; }
+@keyframes ro-slot {
+  0%, 9.6% { opacity: 0; transform: none; }
+  10%, 18.4% { opacity: 1; transform: none; }
+  18.8%, 26% { opacity: 1; transform: translateX(64px); }
+  26.4%, 57.6% { opacity: 0; transform: translateX(64px); }
+  58%, 66.6% { opacity: 1; transform: translateX(64px); }
+  67%, 74% { opacity: 1; transform: none; }
+  74.4%, 100% { opacity: 0; transform: none; }
+}
+
+// The dragged card is a completed one (green edge, check icon), so it's easy to follow.
+.ro-check { fill: none; stroke: #6bcf6b; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+
+// The reorder circles hide while a card is being dragged.
+.ro-dot { animation-name: ro-dot; }
+@keyframes ro-dot {
+  0%, 9.6%, 26.4%, 57.6%, 74.4%, 100% { opacity: 1; }
+  10%, 26%, 58%, 74% { opacity: 0; }
+}
+
+// Recognise tidy selections (4s): the cursor moves from bottom right up to the top-left corner,
+// drags a box over the evenly spaced row ($drag; the box's corner on the cursor), the cards
+// highlight once covered, and on release the box goes and the overlay fades in. The cursor stays
+// bottom right, where the next loop starts. Resting state: the overlay showing (what reduced
+// motion shows; the cursor and box hidden).
+svg[data-feature='detect'] * { animation-duration: 4s; }
+
+.dt-card { animation-name: dt-card; }
+@keyframes dt-card {
+  0%, 39.5%, 90%, 100% { stroke: #5a4a28; }
+  40%, 89.5% { stroke: #f0c040; }
+}
+
+.dt-marquee { opacity: 0; width: 0; height: 0; animation-name: dt-marquee; }
+@keyframes dt-marquee {
+  0%, 9.9% { opacity: 0; width: 0; height: 0; }
+  10% { opacity: 1; width: 0; height: 0; animation-timing-function: $drag; }
+  40%, 45% { opacity: 1; width: 268px; height: 56px; }
+  45.1%, 100% { opacity: 0; width: 268px; height: 56px; }
+}
+
+.dt-overlay { animation-name: dt-overlay; }
+@keyframes dt-overlay { 0%, 45% { opacity: 0; } 55%, 90% { opacity: 1; } 100% { opacity: 0; } }
+
+.dt-cursor { transform-box: view-box; transform-origin: 0 0; animation-name: dt-cursor; }
+@keyframes dt-cursor {
+  0% { transform: translate(271px, 78px); animation-timing-function: $settle; }
+  10% { transform: translate(3px, 22px); animation-timing-function: $drag; }
+  40%, 100% { transform: translate(271px, 78px); }
+}
+// Button down through the drag and its short hold.
+.dt-cursor-press { transform-origin: 0 0; animation-name: dt-cursor-press; }
+@keyframes dt-cursor-press {
+  0%, 9.5% { transform: none; }
+  10%, 45% { transform: scale(0.85); }
+  45.5%, 100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; }
+  .ao-cursor, .rs-cursor, .ro-cursor, .dt-cursor { display: none; }
+}
+

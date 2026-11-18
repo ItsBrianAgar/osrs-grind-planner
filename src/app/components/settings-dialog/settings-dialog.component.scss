@@ -173,6 +173,61 @@ $text-muted: #9a8860;
   color: $text-muted;
 }
 
+// ── Smart layout rows ──
+// Each feature: its preview illustration (SmartLayoutPreviewComponent) full width on top, then its
+// name and description with the switch beside them.
+
+.feature-row {
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 14px 14px 16px;
+  border: 1px solid #2a2417;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.015);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s, background 0.12s;
+
+  & + & { margin-top: 16px; }
+
+  &:hover {
+    border-color: #4a3e22;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #c8a34a;
+    outline-offset: 2px;
+  }
+}
+
+// With the master switch off, the feature cards fade and don't respond.
+.feature-row.disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.smart-master {
+  margin-bottom: 8px;
+}
+
+// The card handles the click; the switch only shows the state.
+.feature-toggle {
+  pointer-events: none;
+}
+
+.feature-preview {
+  // Edge to edge across the card's top: out over its padding, corners following the card's.
+  flex: 0 0 calc(100% + 28px);
+  width: calc(100% + 28px);
+  margin: -14px -14px 0;
+  aspect-ratio: 14 / 5; // the previews' 280 × 100 artboard
+  border: none;
+  border-bottom: 1px solid #2a2417;
+  border-radius: 9px 9px 0 0;
+}
+
 // ── Theme picker ──
 
 .theme-intro {

@@ -135,6 +135,103 @@
         (selectRequested)="canvas.selectOnly($event)"
       />
 
+      <!-- Auto-organise overlay, while the arrangement is live: an outline with an item count, a
+           spacing handle in every gap (drag to re-space all gaps on that axis; Shift snaps to 10s),
+           a circle on each item (drag it to reorder, Figma-style: it follows the cursor, an outline
+           marks where it'll drop, the rest make room), and — when there's an unlinked grid — a
+           right-edge handle that sets how many items per row. Handle sizes are divided by the zoom
+           (--z) so they stay the same size on screen. -->
+      <div
+        *ngIf="organiseOverlay() as ov"
+        class="organise-overlay"
+        [class.dragging-gap-x]="gapDrag()?.axis === 'x'"
+        [class.dragging-gap-y]="gapDrag()?.axis === 'y'"
+        [style.--z]="zoom()"
+      >
+        <div
+          *ngIf="organiseBoxView(ov.box) as bv"
+          class="organise-box"
+          [style.left.px]="bv.x"
+          [style.top.px]="bv.y"
+          [style.width.px]="bv.width"
+          [style.height.px]="bv.height"
+        >
+          <span class="organise-count">{{ ov.label }}</span>
+          <!-- Resize: drag an edge or a handle. Left/right (and the corners) set items per row;
+               top/bottom set the number of rows. The opposite side stays put. -->
+          <ng-container *ngIf="ov.grid && !reorderDrag() && settings.smartLayoutActive().resize">
+            <div class="organise-resize organise-resize--right" (mousedown)="onGridResizeMouseDown($event, 'right')"></div>
+            <div class="organise-resize organise-resize--left" (mousedown)="onGridResizeMouseDown($event, 'left')"></div>
+            <div class="organise-resize organise-resize--top" (mousedown)="onGridResizeMouseDown($event, 'top')"></div>
+            <div class="organise-resize organise-resize--bottom" (mousedown)="onGridResizeMouseDown($event, 'bottom')"></div>
+            <div class="organise-handle organise-handle--tl" (mousedown)="onGridResizeMouseDown($event, 'left')"></div>
+            <div class="organise-handle organise-handle--bl" (mousedown)="onGridResizeMouseDown($event, 'left')"></div>
+            <div class="organise-handle organise-handle--tr" (mousedown)="onGridResizeMouseDown($event, 'right')"></div>
+            <div class="organise-handle organise-handle--br" (mousedown)="onGridResizeMouseDown($event, 'right')"></div>
+            <div class="organise-handle organise-handle--l" (mousedown)="onGridResizeMouseDown($event, 'left')"></div>
+            <div class="organise-handle organise-handle--r" (mousedown)="onGridResizeMouseDown($event, 'right')"></div>
+            <div class="organise-handle organise-handle--t" (mousedown)="onGridResizeMouseDown($event, 'top')"></div>
+            <div class="organise-handle organise-handle--b" (mousedown)="onGridResizeMouseDown($event, 'bottom')"></div>
+          </ng-container>
+        </div>
+
+        <!-- While resizing: a dashed ghost of the box out to the cursor. -->
+        <div
+          *ngIf="gridResizePoint() && resizeGhost(ov.box) as gh"
+          class="organise-resize-ghost"
+          [style.left.px]="gh.x"
+          [style.top.px]="gh.y"
+          [style.width.px]="gh.width"
+          [style.height.px]="gh.height"
+        >
+          <span class="organise-resize-label" [class]="'organise-resize-label organise-resize-label--' + gridResizing()">{{ ov.grid?.perRow }} per row</span>
+        </div>
+
+        <ng-container *ngIf="!reorderDrag()">
+          <ng-container *ngIf="settings.smartLayoutActive().spacing">
+          <div
+            *ngFor="let gap of ov.gaps; let i = index"
+            [class]="'organise-gap organise-gap--' + gap.axis"
+            [style.left.px]="gap.x"
+            [style.top.px]="gap.y"
+            [style.width.px]="gap.width"
+            [style.height.px]="gap.height"
+          >
+            <div
+              class="organise-gap-handle"
+              (mousedown)="onGapHandleMouseDown($event, i)"
+              (mouseenter)="hoverGapIndex.set(i)"
+              (mouseleave)="hoverGapIndex.set(null)"
+            ></div>
+          </div>
+
+          <span
+            *ngIf="organiseLabelGap() as lg"
+            class="organise-gap-label"
+            [style.left.px]="lg.x + lg.width / 2"
+            [style.top.px]="lg.y + lg.height / 2"
+          >{{ lg.axis === 'x' ? organised()!.gapX : organised()!.gapY }}</span>
+          </ng-container>
+
+          <div
+            *ngFor="let item of settings.smartLayoutActive().reorder ? ov.items : []"
+            class="organise-reorder"
+            [style.left.px]="item.cx"
+            [style.top.px]="item.cy"
+            (mousedown)="onReorderHandleMouseDown($event, item)"
+          ></div>
+        </ng-container>
+
+        <div
+          *ngIf="reorderSlot() as slot"
+          class="organise-slot"
+          [style.left.px]="slot.x"
+          [style.top.px]="slot.y"
+          [style.width.px]="slot.width"
+          [style.height.px]="slot.height"
+        ></div>
+      </div>
+
       <!-- Insert-into-connection label, off whichever side of the dragged node/group the new links
            leave free. While charging it's a "hold" prompt with a bar that fills over the dwell time;
            once armed it swaps for the insert prompt, which fades as the unit is pulled away to cancel. -->

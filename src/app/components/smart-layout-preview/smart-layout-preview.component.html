@@ -1,0 +1,96 @@
+<svg [attr.data-feature]="feature" viewBox="0 0 280 100" aria-hidden="true" [ngSwitch]="feature">
+  <!-- Auto organise: the cursor drag-selects the scattered cards, right-clicks, picks Auto organise, and they settle into a row; then it drags each back out, top-left last, to loop. -->
+  <g *ngSwitchCase="'autoOrganise'">
+    <rect class="fp-card ao-a" x="16" y="35" width="78" height="30" rx="3" />
+    <rect class="fp-card ao-b" x="106" y="35" width="78" height="30" rx="3" />
+    <rect class="fp-card ao-c" x="196" y="35" width="78" height="30" rx="3" />
+    <!-- Drag-select over the scattered cards. -->
+    <rect class="fp-marquee ao-marquee" x="24" y="8" width="224" height="84" />
+    <!-- Right-click menu: just Auto organise. -->
+    <g class="ao-menu">
+      <rect class="fp-menu" x="140" y="50" width="78" height="20" rx="4" />
+      <rect class="fp-menu-hover ao-menu-hover" x="142" y="52" width="74" height="16" rx="2" />
+      <text class="fp-menu-item fp-menu-item--accent" x="149" y="63">Auto organise</text>
+    </g>
+    <!-- The cursor doing it all. -->
+    <g class="ao-cursor">
+      <g class="ao-cursor-press">
+        <path class="fp-cursor" d="M0 0 L0 13 L3.5 10 L6 15.5 L8.2 14.5 L5.7 9.3 L10 9.3 Z" />
+      </g>
+    </g>
+  </g>
+  <!-- Spacing: the gaps widen and narrow together as a bar is dragged. -->
+  <g *ngSwitchCase="'spacing'">
+    <rect class="fp-gap sp-gap" x="89" y="35" width="12" height="30" />
+    <rect class="fp-gap sp-gap" x="179" y="35" width="12" height="30" />
+    <g class="sp-left"><rect class="fp-card" x="11" y="35" width="78" height="30" rx="3" /></g>
+    <g><rect class="fp-card" x="101" y="35" width="78" height="30" rx="3" /></g>
+    <g class="sp-right"><rect class="fp-card" x="191" y="35" width="78" height="30" rx="3" /></g>
+    <rect class="fp-bar sp-bar-left" x="94" y="44" width="2" height="12" rx="1" />
+    <rect class="fp-bar sp-bar-right" x="184" y="44" width="2" height="12" rx="1" />
+  </g>
+  <!-- Reorder, as the canvas does it (the dragged card is a completed one, so it's easy to follow): grab a card's circle, it follows the cursor; entering the next card swaps them (instantly) and the slot box moves; release drops it into the slot. Then back, to loop. -->
+  <g *ngSwitchCase="'reorder'">
+    <g class="ro-b">
+      <rect class="fp-card" x="80" y="36" width="56" height="28" rx="3" />
+      <circle class="fp-dot ro-dot" cx="108" cy="50" r="3" />
+    </g>
+    <g>
+      <rect class="fp-card" x="144" y="36" width="56" height="28" rx="3" />
+      <circle class="fp-dot ro-dot" cx="172" cy="50" r="3" />
+    </g>
+    <g>
+      <rect class="fp-card" x="208" y="36" width="56" height="28" rx="3" />
+      <circle class="fp-dot ro-dot" cx="236" cy="50" r="3" />
+    </g>
+    <rect class="fp-slot ro-slot" x="16" y="36" width="56" height="28" rx="3" />
+    <g class="ro-a">
+      <rect class="fp-card ro-a-card" x="16" y="36" width="56" height="28" rx="3" />
+      <g class="ro-check">
+        <circle cx="62" cy="50" r="4.5" />
+        <path d="M59.9 50.2 L61.5 51.8 L64.3 48.6" />
+      </g>
+      <circle class="fp-dot ro-dot" cx="44" cy="50" r="3" />
+    </g>
+    <g class="ro-cursor">
+      <g class="ro-cursor-press">
+        <path class="fp-cursor" d="M0 0 L0 13 L3.5 10 L6 15.5 L8.2 14.5 L5.7 9.3 L10 9.3 Z" />
+      </g>
+    </g>
+  </g>
+  <!-- Resize: a centred 2 × 2 grid; the cursor drags the outline's handle out, the outline stretching with it, and the cards reflow straight into a row of four, staying centred; then back in. -->
+  <g *ngSwitchCase="'resize'">
+    <rect class="fp-card rs-c0" x="80" y="18" width="56" height="28" rx="3" />
+    <rect class="fp-card rs-c1" x="144" y="18" width="56" height="28" rx="3" />
+    <rect class="fp-card rs-c2" x="80" y="54" width="56" height="28" rx="3" />
+    <rect class="fp-card rs-c3" x="144" y="54" width="56" height="28" rx="3" />
+    <g class="rs-outline-v"><rect class="fp-outline rs-outline" x="76" y="14" width="128" height="72" /></g>
+    <rect class="fp-handle rs-handle" x="200.5" y="46.5" width="7" height="7" rx="1.5" />
+    <g class="rs-cursor">
+      <g class="rs-cursor-press">
+        <path class="fp-cursor" d="M0 0 L0 13 L3.5 10 L6 15.5 L8.2 14.5 L5.7 9.3 L10 9.3 Z" />
+      </g>
+    </g>
+  </g>
+  <!-- Recognise tidy selections: the cursor drag-selects an evenly spaced row and, on release, the handles appear; clicking away clears them. -->
+  <g *ngSwitchCase="'detect'">
+    <rect class="fp-card dt-card" x="11" y="35" width="78" height="30" rx="3" />
+    <rect class="fp-card dt-card" x="101" y="35" width="78" height="30" rx="3" />
+    <rect class="fp-card dt-card" x="191" y="35" width="78" height="30" rx="3" />
+    <!-- Drag-select over the row; its corner rides the cursor. -->
+    <rect class="fp-marquee dt-marquee" x="3" y="22" width="268" height="56" />
+    <g class="dt-overlay">
+      <rect class="fp-outline" x="6" y="29" width="268" height="42" />
+      <rect class="fp-bar" x="94" y="44" width="2" height="12" rx="1" />
+      <rect class="fp-bar" x="184" y="44" width="2" height="12" rx="1" />
+      <circle class="fp-dot" cx="50" cy="50" r="3" />
+      <circle class="fp-dot" cx="140" cy="50" r="3" />
+      <circle class="fp-dot" cx="230" cy="50" r="3" />
+    </g>
+    <g class="dt-cursor">
+      <g class="dt-cursor-press">
+        <path class="fp-cursor" d="M0 0 L0 13 L3.5 10 L6 15.5 L8.2 14.5 L5.7 9.3 L10 9.3 Z" />
+      </g>
+    </g>
+  </g>
+</svg>
